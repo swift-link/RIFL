@@ -1,12 +1,17 @@
 <: ;#fix header :>
 <: setFileProcessingOrder late :>
-<: setFileUsedIn {synthesis,implementation} :>
+<: setFileUsedIn {out_of_context,synthesis,implementation} :>
 <: setOutputDirectory "./xdc" :>
 <: setFileName [getComponentNameString] :>
 <: setFileExtension ".xdc" :>
-<: set DWIDTH [getIntValue "DWIDTH"] :>
+<: set GT_WIDTH [getIntValue "GT_WIDTH"] :>
 <: set FRAME_WIDTH [getIntValue "FRAME_WIDTH"] :>
-<: set RATIO [expr $FRAME_WIDTH/$DWIDTH] :>
+<: set FRAME_CLK_RATIO [expr $FRAME_WIDTH/$GT_WIDTH] :>
+<: set USER_WIDTH [getIntValue "USER_WIDTH"] :>
+<: set N_CHANNEL [getIntValue "N_CHANNEL"] :>
+<: set USER_CLK_RATIO [expr $FRAME_WIDTH*$N_CHANNEL/$USER_WIDTH] :>
+<: set USER_GT_CLK_RATIO [expr $USER_WIDTH/$N_CHANNEL/$GT_WIDTH] :>
+<: set ERROR_INJ [getIntValue "ERROR_INJ"] :>
 set init_clk_src [get_ports init_clk]
 set tx_frame_clk_src [get_pins -hier -filter {NAME =~ */u_tx_clock_buffer/bufg_inst3/O}]
 set tx_frame_clk [get_clocks -quiet -of $tx_frame_clk_src]
@@ -15,30 +20,59 @@ set tx_gt_clk [get_clocks -quiet -of $tx_gt_clk_src]
 set rx_gt_clk_src [get_pins -hier -filter {NAME =~ */u_rx_clock_buffer/bufg_inst2/O}]
 set rx_gt_clk [get_clocks -quiet -of $rx_gt_clk_src]
 
+<: if {$USER_CLK_RATIO != 1} { :>
+set usr_clk_src [get_pins -hier -filter {NAME =~ *usr_clk_bufg/O}]
+set usr_clk [get_clocks -quiet -of $usr_clk_src]
+
+<: } :>
 set frame_period [get_property -quiet -min PERIOD $tx_frame_clk]
 set gt_period [get_property -quiet -min PERIOD $tx_gt_clk]
 set_false_path -through [get_ports rst] -quiet
 set_false_path -through [get_ports gt_rst] -quiet
 set_false_path -to [get_cells -hier d_meta_reg[0][*]] -quiet
 set_false_path -to [get_cells -hier rst_meta_reg[*]] -quiet
-set_false_path -from [get_pins -hier -filter {NAME=~*u_sync_tx_frame/rst_meta_reg[3]/C}] -quiet
-set_false_path -from [get_pins -hier -filter {NAME=~*u_sync_rx_frame/rst_meta_reg[3]/C}] -quiet
+set_false_path -from [get_pins -hier -filter {NAME =~ *u_sync_tx_frame/rst_meta_reg[3]/C}] -quiet
+set_false_path -from [get_pins -hier -filter {NAME =~ *u_sync_rx_frame/rst_meta_reg[3]/C}] -quiet
 set_false_path -from [get_pins -hier -filter {NAME =~ *u_tx_clock_buffer/usrclk_active_sync_reg/C}] -quiet
 set_false_path -from [get_pins -hier -filter {NAME =~ *u_rx_clock_buffer/usrclk_active_sync_reg/C}] -quiet
 set_false_path -from [get_pins -hier tx_poweron_rst_reg/C] -quiet
 
 set_max_delay -from [filter [all_fanout -from $rx_gt_clk_src -flat -endpoints_only] {IS_LEAF}] -through [get_pins -of_obj [get_cells -hier * -filter {NAME=~*u_simple_dp_ram/mem_int_reg*}] -filter {DIRECTION==OUT}] $gt_period -datapath_only
 
-<: if {$RATIO != 1} { :>
-set_multicycle_path -quiet -setup -start <=: $RATIO :> -from [get_pins -hier dwidth_conv_out_tdata_reg[*]/C] -to $tx_frame_clk
-set_multicycle_path -quiet -setup -start <=: $RATIO :> -from [get_pins -hier dwidth_conv_out_tkeep_reg[*]/C] -to $tx_frame_clk
-set_multicycle_path -quiet -setup -start <=: $RATIO :> -from [get_pins -hier dwidth_conv_out_tlast_reg/C] -to $tx_frame_clk
-set_multicycle_path -quiet -setup -start <=: $RATIO :> -from [get_pins -hier dwidth_conv_out_tvalid_reg/C] -to $tx_frame_clk
-set_multicycle_path -quiet -hold -start <=: [expr $RATIO-1] :> -from [get_pins -hier dwidth_conv_out_tdata_reg[*]/C] -to $tx_frame_clk
-set_multicycle_path -quiet -hold -start <=: [expr $RATIO-1] :> -from [get_pins -hier dwidth_conv_out_tkeep_reg[*]/C] -to $tx_frame_clk
-set_multicycle_path -quiet -hold -start <=: [expr $RATIO-1] :> -from [get_pins -hier dwidth_conv_out_tlast_reg/C] -to $tx_frame_clk
-set_multicycle_path -quiet -hold -start <=: [expr $RATIO-1] :> -from [get_pins -hier dwidth_conv_out_tvalid_reg/C] -to $tx_frame_clk
-<: } :>
+<: if {$FRAME_CLK_RATIO != 1} { :>
+set_multicycle_path -quiet -setup -start <=: $FRAME_CLK_RATIO :> -from $tx_gt_clk -to $tx_frame_clk
+set_multicycle_path -quiet -hold -start <=: [expr $FRAME_CLK_RATIO-1] :> -from $tx_gt_clk -to $tx_frame_clk
+set_multicycle_path -quiet -setup -end <=: $FRAME_CLK_RATIO :> -from $tx_frame_clk -to $tx_gt_clk
+set_multicycle_path -quiet -hold -end <=: [expr $FRAME_CLK_RATIO-1] :> -from $tx_frame_clk -to $tx_gt_clk
+#vcode_gen
+set_multicycle_path -quiet -setup <=: $FRAME_CLK_RATIO :> -from [get_pins -hier -filter {NAME =~ *u_vcode_gen/crc_previous_reg[*]/C}] -to [get_pins -hier -filter {NAME =~ *u_vcode_gen/data_out_reg[*]/D}]
+set_multicycle_path -quiet -hold <=: [expr $FRAME_CLK_RATIO-1] :> -from [get_pins -hier -filter {NAME =~ *u_vcode_gen/crc_previous_reg[*]/C}] -to [get_pins -hier -filter {NAME =~ *u_vcode_gen/data_out_reg[*]/D}]
+set_multicycle_path -quiet -setup <=: $FRAME_CLK_RATIO :> -from [get_pins -hier -filter {NAME =~ *frame_id_reg[*]/C}]
+set_multicycle_path -quiet -hold <=: [expr $FRAME_CLK_RATIO-1] :> -from [get_pins -hier -filter {NAME =~ *frame_id_reg[*]/C}]
+#vcode_val
+set_multicycle_path -quiet -setup <=: $FRAME_CLK_RATIO :> -from [get_pins -hier -filter {NAME =~ *frame_id_threshold_reg[*]/C}]
+set_multicycle_path -quiet -hold <=: [expr $FRAME_CLK_RATIO-1] :>  -from [get_pins -hier -filter {NAME =~ *frame_id_threshold_reg[*]/C}]
+set_multicycle_path -quiet -setup <=: $FRAME_CLK_RATIO :> -to [get_pins -hier -filter {NAME =~ *rx_error_reg/D}]
+set_multicycle_path -quiet -hold <=: [expr $FRAME_CLK_RATIO-1] :>  -to [get_pins -hier -filter {NAME =~ *rx_error_reg/D}]
 
+<: } :>
+<: if {$USER_CLK_RATIO != 1} { :>
+set_multicycle_path -quiet -setup -start <=: $USER_CLK_RATIO :> -from $usr_clk -to $tx_frame_clk
+set_multicycle_path -quiet -hold -start <=: [expr $USER_CLK_RATIO-1] :> -from $usr_clk -to $tx_frame_clk
+set_multicycle_path -quiet -setup -end <=: $USER_CLK_RATIO :> -from $tx_frame_clk -to $usr_clk
+set_multicycle_path -quiet -hold -end <=: [expr $USER_CLK_RATIO-1] :> -from $tx_frame_clk -to $usr_clk
+
+<: } :>
+<: if {$USER_CLK_RATIO != 1 && $USER_GT_CLK_RATIO != 1} { :>
+set_multicycle_path -quiet -setup -start <=: $USER_GT_CLK_RATIO :> -from $tx_gt_clk -to $usr_clk
+set_multicycle_path -quiet -hold -start <=: [expr $USER_GT_CLK_RATIO-1] :> -from $tx_gt_clk -to $usr_clk
+
+<: } :>
 #compensate buffer
 set_max_delay -from [filter [all_fanout -from $init_clk_src -flat -endpoints_only] {IS_LEAF}] -through [get_pins -of_obj [get_cells -hier * -filter {NAME=~*mbc_int_reg*}] -filter {DIRECTION==OUT}] $frame_period -datapath_only
+<: if {$ERROR_INJ != 0} { :>
+#error injection
+set_false_path -through [get_ports err_threshold[*]]
+set_false_path -from [get_pins -hier -filter {NAME =~ *threshold_reg_reg[*]/C}]
+set_false_path -from [get_pins -hier -filter {NAME =~ *u_rifl_err_inj/err_vec_reg[*]/C}]
+<: } :>

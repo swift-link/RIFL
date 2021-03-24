@@ -8,7 +8,6 @@ module rifl_scramble_cntrl #
     parameter int N2 = 33
 )
 (
-    input logic rst,
     input logic clk,
     input logic sof,
     input logic [DWIDTH-1:0] data_in,
@@ -17,7 +16,7 @@ module rifl_scramble_cntrl #
 );
     localparam PIP_CYCLES = FRAME_WIDTH/DWIDTH;
     localparam CNT_WIDTH = PIP_CYCLES > 1 ? $clog2(PIP_CYCLES) : 1;
-    logic [N2-1:0] scrambler_in;
+    logic [N2-1:0] scrambler_in = {N2{1'b0}};
     logic [N2-1:0] scrambler_out_head, scrambler_out_tail, scrambler_out_body;
     logic [DWIDTH-3-CRC_WIDTH:0] data_out_head_narrow;
     logic [DWIDTH-3:0] data_out_head;
@@ -25,8 +24,10 @@ module rifl_scramble_cntrl #
     logic [DWIDTH-1:0] data_out_body;
     logic [CNT_WIDTH-1:0] cnt;
 
+/*
     if (N2 > (DWIDTH+2) || (PIP_CYCLES == 1 && N2 > (DWIDTH+2+CRC_WIDTH)))
         $error("RIFL couldn't handle this combination of {CRC,SCRAMBLER,FRAME_WIDTH,BUS_WIDTH}");
+*/
 
     always_ff @(posedge clk) begin
         sof_out <= sof;
@@ -34,9 +35,7 @@ module rifl_scramble_cntrl #
 
     if (PIP_CYCLES != 1) begin
         always_ff @(posedge clk) begin
-            if (rst)
-                cnt <= 'b0;
-            else if (sof)
+            if (sof)
                 cnt <= 'b1;
             else if (cnt != 'b0)
                 cnt <= cnt + 1'b1;
@@ -47,10 +46,7 @@ module rifl_scramble_cntrl #
 
     if (PIP_CYCLES == 1) begin
         always_ff @(posedge clk) begin
-            if (rst)
-                scrambler_in <= {N2{1'b0}};
-            else
-                scrambler_in <= scrambler_out_head;
+            scrambler_in <= scrambler_out_head;
         end
         always_ff @(posedge clk) begin
             data_out <= {data_in[DWIDTH-1:DWIDTH-2],data_out_head_narrow,{CRC_WIDTH{1'b0}}};
@@ -58,9 +54,7 @@ module rifl_scramble_cntrl #
     end
     else if (PIP_CYCLES == 2) begin
         always_ff @(posedge clk) begin
-            if (rst)
-                scrambler_in <= {N2{1'b0}};
-            else if (cnt == 'b0)
+            if (cnt == 'b0)
                 scrambler_in <= scrambler_out_head;
             else
                 scrambler_in <= scrambler_out_tail;
@@ -74,9 +68,7 @@ module rifl_scramble_cntrl #
     end
     else begin
         always_ff @(posedge clk) begin
-            if (rst)
-                scrambler_in <= {N2{1'b0}};
-            else if (cnt == 'b0)
+            if (cnt == 'b0)
                 scrambler_in <= scrambler_out_head;
             else if (cnt == PIP_CYCLES-1)
                 scrambler_in <= scrambler_out_tail;

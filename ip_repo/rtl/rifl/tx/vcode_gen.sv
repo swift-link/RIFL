@@ -15,6 +15,7 @@ module vcode_gen #
     input logic [DWIDTH-1:0] data_in,
     output logic [DWIDTH-1:0] data_out = {DWIDTH{1'b0}}
 );
+    //prevent vivado from optimizing this register, because it makes the timing a lot worse
     logic [FRAME_ID_WIDTH-1:0] frame_id = {FRAME_ID_WIDTH{1'b0}};
 
     logic [CRC_WIDTH-1:0] crc_int_in, crc_int_out;
@@ -70,12 +71,12 @@ module vcode_gen #
         always_ff @(posedge clk) begin
             if (cnt == TAIL_CNT)
                 crc_previous <= {CRC_WIDTH{1'b0}};
-            else if ((sof && data_in[DWIDTH-1-:2] == 2'b01) || isdata)
+            else
                 crc_previous <= crc_int_out;
         end
         always_ff @(posedge clk) begin
             if (cnt == TAIL_CNT)
-                data_out <= {data_in[DWIDTH-1:CRC_WIDTH],crc_int_out} ^ frame_id;
+                data_out <= {data_in[DWIDTH-1:CRC_WIDTH],crc_int_out ^ frame_id};
             else
                 data_out <= data_in;
         end

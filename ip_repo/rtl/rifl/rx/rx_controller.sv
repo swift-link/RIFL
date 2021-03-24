@@ -19,15 +19,11 @@ module rx_controller (
             pause_cnt <= 4'b0;
             retrans_cnt <= 4'b0;
             regular_cnt <= 5'b0;
-            pause_req <= 1'b0;
-            retrans_req <= 1'b0;
         end
         else if (~rx_aligned) begin
             pause_cnt <= 4'b0;
             retrans_cnt <= 4'b0;
             regular_cnt <= 5'b0;
-            pause_req <= 1'b0;
-            retrans_req <= 1'b0;            
         end
         else if (sof) begin
             if (code[17:16] == 2'b10) begin
@@ -40,7 +36,7 @@ module rx_controller (
                 else if (~retrans_cnt[3])
                     retrans_cnt <= retrans_cnt + 1'b1;
             end
-            else begin
+            else if (regular_cnt[4]) begin
                 pause_cnt <= 4'b0;
                 retrans_cnt <= 4'b0;
             end
@@ -48,17 +44,8 @@ module rx_controller (
                 regular_cnt <= 5'b0;
             else if (~regular_cnt[4])
                 regular_cnt <= regular_cnt + 1'b1;
-
-            if (pause_cnt[3])
-                pause_req <= 1'b1;
-            else if (retrans_cnt[3] | regular_cnt[4])
-                pause_req <= 1'b0;
-
-            if (regular_cnt[4])
-                retrans_req <= 1'b0;
-            else if (retrans_cnt[3])
-                retrans_req <= 1'b1;
         end        
     end
-
+    assign retrans_req = retrans_cnt[3];
+    assign pause_req = pause_cnt[3];
 endmodule

@@ -12,6 +12,7 @@ module vcode_val #
     input logic clk,
     input logic rst,
     input logic sof,
+    input logic rx_up,
     input logic [DWIDTH-1:0] data_in,
     output logic crc_good_out = 1'b0,
     output logic rx_error = 1'b0,
@@ -49,16 +50,16 @@ module vcode_val #
                 frame_id_threshold <= ROLLBACK_CYCLES;
                 rx_error <= 1'b0;
             end
-            else if (sof && data_in[DWIDTH-1-:2] === 2'b01) begin
-                if (crc_good)
+            else if (sof & rx_up) begin
+                if (crc_good && data_in[DWIDTH-1-:2] == 2'b01)
                     frame_id <= frame_id + 1'b1;
-                else
+                else if (~crc_good)
                     frame_id <= frame_id_threshold - ROLLBACK_CYCLES;
                 if (~crc_good)
                     rx_error <= 1'b1;
                 else if (frame_id_threshold === (frame_id + 1'b1) && crc_good)
                     rx_error <= 1'b0;
-                if (frame_id_threshold == frame_id && crc_good)
+                if (frame_id_threshold == frame_id && crc_good && data_in[DWIDTH-1-:2] == 2'b01)
                     frame_id_threshold <= frame_id_threshold + 1'b1;
             end
         end
@@ -71,6 +72,8 @@ module vcode_val #
         end
         always_ff @(posedge clk) begin
             if (rst)
+                isdata <= 1'b0;
+            else if (~rx_up)
                 isdata <= 1'b0;
             else
                 isdata <= data_in[DWIDTH-1-:2] == 2'b01 ? 1'b1 : 1'b0;
@@ -88,15 +91,15 @@ module vcode_val #
         always_ff @(posedge clk) begin
             if (rst)
                 cnt <= 'b0;
-            else if (sof)
+            else if (sof & rx_up)
                 cnt <= 'b1;
-            else
+            else if (|cnt)
                 cnt <= cnt + 1'b1;
         end
         always_ff @(posedge clk) begin
             if (rst)
                 isdata <= 1'b0;
-            else if (sof)
+            else if (sof & rx_up)
                 isdata <= data_in[DWIDTH-1-:2] == 2'b01 ? 1'b1 : 1'b0;
             else if (cnt == 'b0)
                 isdata <= 1'b0;
@@ -106,7 +109,7 @@ module vcode_val #
                 crc_previous <= {CRC_WIDTH{1'b0}};
             else if (cnt == TAIL_CNT)
                 crc_previous <= {CRC_WIDTH{1'b0}};
-            else if ((sof && data_in[DWIDTH-1-:2] == 2'b01) || (isdata && cnt != 'b0))
+            else if ((|cnt) || (sof & rx_up))
                 crc_previous <= crc_int_out;
         end
         always_ff @(posedge clk) begin
@@ -115,16 +118,16 @@ module vcode_val #
                 frame_id_threshold <= ROLLBACK_CYCLES;
                 rx_error <= 1'b0;
             end
-            else if (cnt == TAIL_CNT && isdata) begin
-                if (crc_good)
+            else if (cnt == TAIL_CNT) begin
+                if (crc_good & isdata)
                     frame_id <= frame_id + 1'b1;
-                else
+                else if (~crc_good)
                     frame_id <= frame_id_threshold - ROLLBACK_CYCLES;
                 if (~crc_good)
                     rx_error <= 1'b1;
                 else if ((frame_id_threshold == frame_id + 1'b1) && crc_good)
                     rx_error <= 1'b0;
-                if (frame_id_threshold == frame_id && crc_good)
+                if (frame_id_threshold == frame_id && crc_good && isdata)
                     frame_id_threshold <= frame_id_threshold + 1'b1;
             end
         end
@@ -133,7 +136,7 @@ module vcode_val #
                 crc_good_out <= 1'b0;
             else if (cnt == TAIL_CNT)
             //one cycle for descrambler
-                crc_good_out <= frame_id_threshold == frame_id && crc_good && isdata;
+                crc_good_out <= frame_id_threshold == frame_id && crc_good;
             else
                 crc_good_out <= 1'b0;
         end

@@ -8,7 +8,7 @@
 module rifl_gt_wrapper # (
     parameter int N_CHANNEL = 1,
     parameter int FRAME_WIDTH = 256,
-    parameter int DWIDTH = 64
+    parameter int GT_WIDTH = 64
 )
 (
 //clk and rst
@@ -24,9 +24,9 @@ module rifl_gt_wrapper # (
 //gt loopback port
     input logic [3*N_CHANNEL-1:0] gt_loopback_in,
 //tx data interface
-    input logic [DWIDTH-1:0] gt_tx_data[N_CHANNEL-1:0],
+    input logic [GT_WIDTH-1:0] gt_tx_data[N_CHANNEL-1:0],
 //rx data interface
-    output logic [DWIDTH-1:0] gt_rx_data[N_CHANNEL-1:0],
+    output logic [GT_WIDTH-1:0] gt_rx_data[N_CHANNEL-1:0],
 //gt output pins
     output logic [N_CHANNEL-1:0] gt_txp_out,
     output logic [N_CHANNEL-1:0] gt_txn_out,
@@ -48,7 +48,7 @@ module rifl_gt_wrapper # (
     logic bypass_tx_reset_gt;
     logic bypass_rx_reset_gt;
     logic rst_all_gt;
-    logic [N_CHANNEL-1:0] rst_rx_datapath_gt;
+    logic rst_rx_datapath_gt;
     logic rst_tx_done_gt;
     logic rst_rx_done_gt;
     logic bypass_tx_done_gt;
@@ -58,7 +58,7 @@ module rifl_gt_wrapper # (
     logic [N_CHANNEL-1:0] rxpmaresetdone_out;
 
 //data
-    logic [DWIDTH*N_CHANNEL-1:0] gt_tx_data_int, gt_rx_data_int;
+    logic [GT_WIDTH*N_CHANNEL-1:0] gt_tx_data_int, gt_rx_data_int;
 
 //control and status
     logic tx_good_tx_synced;
@@ -90,17 +90,14 @@ module rifl_gt_wrapper # (
         .rst_out(rst_all_gt)
     );
 
-    genvar i;
-    for (i = 0; i < N_CHANNEL; i++) begin
-        datapath_reset # (
-            .COUNTER_WIDTH(23)
-        ) rx_datapath_reset_inst (
-            .clk(init_clk),
-            .rst(gt_init_rst),
-            .channel_good(rx_good_init_synced[i]),
-            .rst_out(rst_rx_datapath_gt[i])
-        );
-    end
+    datapath_reset # (
+        .COUNTER_WIDTH(23)
+    ) rx_datapath_reset_inst (
+        .clk(init_clk),
+        .rst(gt_init_rst),
+        .channel_good(&rx_good_init_synced),
+        .rst_out(rst_rx_datapath_gt)
+    );
 
 //gt_core
     <=: $gt_module_name :> rifl_gt_core_inst (
@@ -121,7 +118,7 @@ module rifl_gt_wrapper # (
         .gtwiz_reset_tx_pll_and_datapath_in      (1'b0),
         .gtwiz_reset_tx_datapath_in              (1'b0),
         .gtwiz_reset_rx_pll_and_datapath_in      (1'b0),
-        .gtwiz_reset_rx_datapath_in              (|rst_rx_datapath_gt),
+        .gtwiz_reset_rx_datapath_in              (rst_rx_datapath_gt),
         .gtwiz_reset_rx_cdr_stable_out           (),
         .gtwiz_reset_tx_done_out                 (rst_tx_done_gt),
         .gtwiz_reset_rx_done_out                 (rst_rx_done_gt),
@@ -146,9 +143,10 @@ module rifl_gt_wrapper # (
     );
 
 //data
+    genvar i;
     for (i = 0; i < N_CHANNEL; i++) begin
-        assign gt_tx_data_int[(i+1)*DWIDTH-1-:DWIDTH] = gt_tx_data[i];
-        assign gt_rx_data[i] = gt_rx_data_int[(i+1)*DWIDTH-1-:DWIDTH];
+        assign gt_tx_data_int[(i+1)*GT_WIDTH-1-:GT_WIDTH] = gt_tx_data[i];
+        assign gt_rx_data[i] = gt_rx_data_int[(i+1)*GT_WIDTH-1-:GT_WIDTH];
     end
 
 //control
