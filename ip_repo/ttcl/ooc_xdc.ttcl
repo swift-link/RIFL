@@ -1,0 +1,10 @@
+<: ;#fix header :>
+<: setFileProcessingOrder early :>
+<: setFileUsedIn {out_of_context} :>
+<: setOutputDirectory "./xdc" :>
+<: setFileName "[getComponentNameString]_ooc" :>
+<: setFileExtension ".xdc" :>
+<: set GT_REF_FREQ [getStringValue "GT_REF_FREQ"] :>
+<: set GT_PERIOD [format %.3f [expr 1000.0/$GT_REF_FREQ]] :>
+create_clock -period <=: $GT_PERIOD :> [get_ports gt_ref_clk_p]
+create_clock -period 10.0 [get_ports init_clk]

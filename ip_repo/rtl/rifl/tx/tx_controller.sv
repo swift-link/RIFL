@@ -31,26 +31,24 @@ module tx_controller # (
     localparam bit [2:0] RETRANS = 3'd3;
     localparam bit [2:0] SEND_RESTRANS = 3'd4;
     localparam bit [2:0] NORMAL = 3'd5;
-//rx verification code valitation rollback cycles
-    localparam bit [FRAME_ID_WIDTH-1:0] ROLLBACK_CYCLES = 'd16;
 
     logic shiftreg_ready;
 
-    logic retrans_enable;
+    logic retrans_data_in_vld;
     logic [PAYLOAD_WIDTH+1:0] retrans_data_in;
     logic [PAYLOAD_WIDTH+1:0] retrans_data_out;
 
     logic [FRAME_ID_WIDTH+1:0] retrans_counter;
     logic [FRAME_ID_WIDTH:0] rollback_counter;
 
-    logic [PAYLOAD_WIDTH+3:0] rifl_tx_data_reg;
+    logic [PAYLOAD_WIDTH+3:0] rifl_tx_data_reg = PAUSE_CODE;
 
     rifl_shiftreg #(
         .PAYLOAD_WIDTH  (PAYLOAD_WIDTH),
         .FRAME_ID_WIDTH (FRAME_ID_WIDTH)
     ) u_rifl_shiftreg(
         .*,
-        .enable         (retrans_enable),
+        .enable         (retrans_data_in_vld),
         .data_in        (retrans_data_in),
         .data_out       (retrans_data_out),
         .shiftreg_ready (shiftreg_ready)
@@ -101,7 +99,7 @@ module tx_controller # (
         else
             retrans_data_in = {(PAYLOAD_WIDTH+2){1'b0}};
     end
-    assign retrans_enable = state == INIT || (state == RETRANS && ~retrans_counter[FRAME_ID_WIDTH+1] && ~retrans_counter[0]) || (state == NORMAL && ~compensate);
+    assign retrans_data_in_vld = (state == RETRANS && ~retrans_counter[FRAME_ID_WIDTH+1] && ~retrans_counter[0]) || (state == NORMAL && ~compensate);
 
 //output for different situations
     always_ff @(posedge clk) begin
@@ -109,14 +107,14 @@ module tx_controller # (
             rifl_tx_data_reg <= PAUSE_CODE;
         else begin
             if (state == INIT)
-                rifl_tx_data_reg <= {2'b01,{(PAYLOAD_WIDTH+2){1'b0}}};
+                rifl_tx_data_reg <= PAUSE_CODE;
             else if (state == SEND_PAUSE)
                 rifl_tx_data_reg <= PAUSE_CODE;
             else if (state == PAUSE)
                 rifl_tx_data_reg <= IDLE_CODE;
             else if (state == RETRANS) begin
                 if (retrans_counter[FRAME_ID_WIDTH+1])
-                    rifl_tx_data_reg <= IDLE_CODE;
+                    rifl_tx_data_reg <= rx_error ? RETRANS_CODE : IDLE_CODE;
                 else if (~retrans_counter[0])
                     rifl_tx_data_reg <= {2'b01,retrans_data_out};
                 else
@@ -159,16 +157,18 @@ module rifl_shiftreg #(
     always_ff @(posedge clk) begin
         if (rst)
             rdy_cnt <= {(FRAME_ID_WIDTH+1){1'b0}};
-        else if (enable & ~rdy_cnt[FRAME_ID_WIDTH])
+        else if (~shiftreg_ready)
             rdy_cnt <= rdy_cnt + 1'b1;
     end
 
     always_ff @(posedge clk) begin
-        if (enable) begin
+        if (~shiftreg_ready)
+            shiftreg[0] <= {2'b01,{(PAYLOAD_WIDTH+2){1'b0}}};
+        else if (enable)
             shiftreg[0] <= data_in;
+        if (~shiftreg_ready | enable)
             for (int i = 0; i < DEPTH-1; i++)
                 shiftreg[i+1] <= shiftreg[i];
-        end
     end
     assign data_out = shiftreg[DEPTH-1];
     assign shiftreg_ready = rdy_cnt[FRAME_ID_WIDTH];

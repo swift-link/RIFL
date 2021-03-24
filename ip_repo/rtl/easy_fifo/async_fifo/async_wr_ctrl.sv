@@ -52,7 +52,7 @@ module async_wr_ctrl #
             wr_full <= 1'b0;
         end
         else begin
-            wr_full <= (wr_ptr_bin+(wr_en&~wr_full)) === {~rd_ptr_wsync_bin[AWIDTH],rd_ptr_wsync_bin[AWIDTH-1:0]};
+            wr_full <= (wr_ptr_bin+(wr_en&~wr_full)) == {~rd_ptr_wsync_bin[AWIDTH],rd_ptr_wsync_bin[AWIDTH-1:0]};
         end
     end
 

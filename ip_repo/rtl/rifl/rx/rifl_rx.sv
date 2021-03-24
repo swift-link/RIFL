@@ -3,13 +3,14 @@ module rifl_rx #
 (
     parameter int FRAME_WIDTH = 256,
     parameter int PAYLOAD_WIDTH = 240,
-    parameter int DWIDTH = 64,
+    parameter int GT_WIDTH = 64,
     parameter int CNT_WIDTH = 2,
     parameter int CRC_WIDTH = 12,
     parameter int CRC_POLY = 12'h02f,
     parameter int FRAME_ID_WIDTH = 8,
     parameter int SCRAMBLER_N1 = 13,
-    parameter int SCRAMBLER_N2 = 33
+    parameter int SCRAMBLER_N2 = 33,
+    parameter int FRAME_FREQ = 100
 )
 (
     input logic tx_frame_clk,
@@ -18,8 +19,8 @@ module rifl_rx #
     input logic rst,
     input logic tx_frame_rst,
     input logic rx_frame_rst,
-    input logic [CNT_WIDTH-1:0] tx_cnt,
-    input logic [DWIDTH-1:0] gt_rx_data,
+    input logic [CNT_WIDTH-1:0] clk_cnt,
+    input logic [GT_WIDTH-1:0] gt_rx_data,
 //user data interface (packed)
     output logic [PAYLOAD_WIDTH-1:0] rx_lane_tdata,
     output logic [PAYLOAD_WIDTH/8-1:0] rx_lane_tkeep,
@@ -37,6 +38,8 @@ module rifl_rx #
     localparam int BUFFER_DEPTH = 1 << (FRAME_ID_WIDTH+1);
     localparam int PAUSE_ON_VAL = 2*BUFFER_DEPTH/3;
     localparam int PAUSE_OFF_VAL = BUFFER_DEPTH/3;
+    //add an output buffer for frequency more than 200MHz
+    localparam bit RX_BUFFER_REG = FRAME_FREQ >= 200 ? 1'b1 : 1'b0;
 
 //control signals
     logic rx_up_rx, rx_up_tx;
@@ -45,16 +48,16 @@ module rifl_rx #
     logic retrans_req_tx, retrans_req_rx;
 
 //rx aligner
-    logic [DWIDTH-1:0] gt_rx_data_aligned;
+    logic [GT_WIDTH-1:0] gt_rx_data_aligned;
     logic sof_aligner;
     logic rx_up_unsynced;
 //verification code validation
     logic crc_good, isdata;
 //descrambler
     logic sof_descrambler;
-    logic [DWIDTH-1:0] descrambled_data;
+    logic [GT_WIDTH-1:0] descrambled_data;
 //datawidth converter
-    logic [DWIDTH+1:0] dwidth_conv_in;
+    logic [GT_WIDTH+1:0] dwidth_conv_in;
     logic dwidth_conv_in_vld;
     logic [PAYLOAD_WIDTH-1:0] dwidth_conv_out_tdata;
     logic [PAYLOAD_WIDTH/8-1:0] dwidth_conv_out_tkeep;
@@ -64,7 +67,7 @@ module rifl_rx #
     logic [$clog2(BUFFER_DEPTH):0] rxbuffer_cnt;
 
     rx_aligner #(
-        .DWIDTH        (DWIDTH),
+        .DWIDTH        (GT_WIDTH),
         .FRAME_WIDTH   (FRAME_WIDTH)
     ) u_rx_aligner(
         .rst                 (rx_frame_rst),
@@ -78,14 +81,15 @@ module rifl_rx #
 
     vcode_val #(
         .FRAME_WIDTH     (FRAME_WIDTH),
-        .DWIDTH          (DWIDTH),
+        .DWIDTH          (GT_WIDTH),
         .CRC_WIDTH       (CRC_WIDTH),
         .CRC_POLY        (CRC_POLY),
         .FRAME_ID_WIDTH  (FRAME_ID_WIDTH)
     ) u_vcode_val(
         .clk          (rx_gt_clk),
         .rst          (rx_frame_rst),
-        .sof          (sof_aligner&rx_up_rx),
+        .sof          (sof_aligner),
+        .rx_up        (rx_up_rx),
         .data_in      (gt_rx_data_aligned),
         .crc_good_out (crc_good),
         .rx_error     (rx_error_rx),
@@ -94,14 +98,13 @@ module rifl_rx #
 
     rifl_scramble_cntrl #(
         .FRAME_WIDTH (FRAME_WIDTH),
-        .DWIDTH      (DWIDTH),
+        .DWIDTH      (GT_WIDTH),
         .CRC_WIDTH   (CRC_WIDTH),
         .DIRECTION   (1'b1),
         .N1          (SCRAMBLER_N1),
         .N2          (SCRAMBLER_N2)
     ) u_rifl_scramble_cntrl(
         .clk      (rx_gt_clk),
-        .rst      (rx_frame_rst),
         .sof      (sof_aligner),
         .data_in  (gt_rx_data_aligned),
         .sof_out  (sof_descrambler),
@@ -113,14 +116,14 @@ module rifl_rx #
         .rst         (rx_frame_rst),
         .sof         (sof_descrambler),
         .rx_aligned  (rx_aligned_rx),
-        .code        (descrambled_data[DWIDTH-1-:18]),
+        .code        (descrambled_data[GT_WIDTH-1-:18]),
         .pause_req   (pause_req_rx),
         .retrans_req (retrans_req_rx)
     );
 
 //this buffer suppose to be never overflowed because of the clock compensation mechanism
     rifl_axis_async_fifo #(
-        .DWIDTH (DWIDTH+2),
+        .DWIDTH (GT_WIDTH+2),
         .DEPTH  (32)
     ) u_rifl_axis_async_fifo(
         .rst           (rst),
@@ -135,7 +138,7 @@ module rifl_rx #
     );
 
     rx_dwidth_conv #(
-        .DWIDTH (DWIDTH),
+        .DWIDTH (GT_WIDTH),
         .FRAME_WIDTH (FRAME_WIDTH),
         .PAYLOAD_WIDTH (PAYLOAD_WIDTH),
         .CNT_WIDTH(CNT_WIDTH)
@@ -143,15 +146,16 @@ module rifl_rx #
         .*,
         .clk      (tx_gt_clk),
         .rst      (tx_frame_rst),
-        .din      (dwidth_conv_in[DWIDTH-1:0]),
-        .data_sof (dwidth_conv_in[DWIDTH]),
-        .crc_good (dwidth_conv_in[DWIDTH+1]),
+        .din      (dwidth_conv_in[GT_WIDTH-1:0]),
+        .data_sof (dwidth_conv_in[GT_WIDTH]),
+        .crc_good (dwidth_conv_in[GT_WIDTH+1]),
         .din_valid(dwidth_conv_in_vld)
     );
 
     rifl_axis_sync_fifo #(
         .DWIDTH (PAYLOAD_WIDTH),
-        .DEPTH  (BUFFER_DEPTH)
+        .DEPTH  (BUFFER_DEPTH),
+        .OUTPUT_REG (RX_BUFFER_REG)
     ) u_rifl_axis_sync_fifo(
     	.rst           (tx_frame_rst),
         .clk           (tx_frame_clk),

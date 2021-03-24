@@ -7,7 +7,7 @@ module tx_dwidth_conv # (
 )
 (
    input logic clk,
-   input logic [CNT_WIDTH-1:0] cnt,
+   input logic [CNT_WIDTH-1:0] clk_cnt,
    input logic [DWIDTH_IN-1:0] din,
    output logic [DWIDTH_OUT-1:0] dout,
    output logic sof_out = 1'b0
@@ -16,7 +16,7 @@ module tx_dwidth_conv # (
         localparam int RATIO = DWIDTH_IN / DWIDTH_OUT;
         logic [DWIDTH_IN-1:0] din_reg = {DWIDTH_IN{1'b0}};
         always_ff @(posedge clk) begin
-            if (cnt == 'b1) begin
+            if (clk_cnt == 'b0) begin
                 din_reg <= din;
                 sof_out <= 1'b1;
             end

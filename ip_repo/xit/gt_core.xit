@@ -5,14 +5,22 @@ namespace eval rifl {
     #set sub_core [create_sub_core $sub_core_vlnv $gt_module_name]
 #    set sub_core [create_sub_core $sub_core_vlnv gt_core]
 
-    set linerate [get_property CONFIG.LINE_RATE [::ipxit::current_inst]]
+    set linerate [get_property CONFIG.LANE_LINE_RATE [::ipxit::current_inst]]
     set ref_freq [get_property CONFIG.GT_REF_FREQ [::ipxit::current_inst]]
     set gt_type [get_property CONFIG.GT_TYPE [::ipxit::current_inst]]
     set master_channel [get_property CONFIG.MASTER_CHAN [::ipxit::current_inst]]
     set n_channel [get_property CONFIG.N_CHANNEL [::ipxit::current_inst]]
-    set gt_bus_width [get_property CONFIG.DWIDTH [::ipxit::current_inst]]
+    set gt_bus_width [get_property CONFIG.GT_WIDTH [::ipxit::current_inst]]
 
-    set fraqcn [expr int(($linerate*1000/$ref_freq/2-floor($linerate*1000/$ref_freq/2))*2**24)]
+    set rate_ratio 1.0
+    if {$linerate > 16.375} {
+        set rate_ratio 2.0
+    }
+
+    set whole [expr $linerate*1000.0/$ref_freq/$rate_ratio]
+    set major [expr floor($whole)]
+    set minor [expr $whole - $major]
+    set fraqcn [expr int($minor*2**24)]
 
     if {$master_channel != "UNDEFINED"} {
         set sub_core_vlnv xilinx.com:ip:gtwizard_ultrascale:1.7

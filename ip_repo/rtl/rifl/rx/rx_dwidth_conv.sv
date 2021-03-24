@@ -18,7 +18,7 @@ module rx_dwidth_conv #
 (
     input logic clk,
     input logic rst,
-    input logic [CNT_WIDTH-1:0] tx_cnt,
+    input logic [CNT_WIDTH-1:0] clk_cnt,
     input logic [DWIDTH-1:0] din,
     input logic data_sof,
     input logic crc_good,
@@ -77,7 +77,7 @@ module rx_dwidth_conv #
                         rifl_rx_meta <= din[DWIDTH-3-:2];
                     end
 
-                    if (cnt & ~tx_cnt) begin
+                    if (cnt & ~clk_cnt) begin
                         int_tdata <= {int_reg[DWIDTH-5:0],din[DWIDTH-1:FRAME_WIDTH-4-PAYLOAD_WIDTH]};
                         for (int i = 0; i < PAYLOAD_WIDTH/8; i++)
                             int_tkeep[PAYLOAD_WIDTH/8-1-i] <= rifl_rx_meta[0] || (din[FRAME_WIDTH+3-PAYLOAD_WIDTH-:8] > i && |rifl_rx_meta);
@@ -108,7 +108,7 @@ module rx_dwidth_conv #
                     end
                     else
                         int_reg <= {int_reg[DWIDTH_INT-DWIDTH-1:0],din};
-                    if (cnt == EOF_CNT && tx_cnt != SAMPLE_EDGE_IDX) begin
+                    if (cnt == EOF_CNT && clk_cnt != SAMPLE_EDGE_IDX) begin
                         int_tdata <= {int_reg[DWIDTH_INT-5:0],din[DWIDTH-1:FRAME_WIDTH-4-PAYLOAD_WIDTH]};
                         for (int i = 0; i < PAYLOAD_WIDTH/8; i++)
                             int_tkeep[PAYLOAD_WIDTH/8-1-i] <= rifl_rx_meta[0] || (din[FRAME_WIDTH+3-PAYLOAD_WIDTH-:8] > i && |rifl_rx_meta);
@@ -122,8 +122,9 @@ module rx_dwidth_conv #
         always_ff @(posedge clk) begin
             if (rst) begin
                 buffer_rd_flag <= 1'b0;
+                dwidth_conv_out_tvalid <= 1'b0;
             end
-            else if (tx_cnt == SAMPLE_EDGE_IDX) begin
+            else if (clk_cnt == SAMPLE_EDGE_IDX) begin
                 if (buffer_wr_flag ^ buffer_rd_flag) begin
                     dwidth_conv_out_tdata <= int_tdata;
                     dwidth_conv_out_tkeep <= int_tkeep;
