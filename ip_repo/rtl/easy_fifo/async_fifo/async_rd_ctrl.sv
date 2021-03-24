@@ -46,7 +46,7 @@ module async_rd_ctrl #
 			fifo_cnt_rd_synced <= wr_ptr_rsync_bin - rd_ptr_bin;
 	end
 
-    assign rd_empty = rd_ptr_bin === wr_ptr_rsync_bin;
+    assign rd_empty = rd_ptr_bin == wr_ptr_rsync_bin;
 
     assign rd_addr = rd_ptr_bin[AWIDTH-1:0];
 endmodule

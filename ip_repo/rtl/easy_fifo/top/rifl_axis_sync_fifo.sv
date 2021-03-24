@@ -3,7 +3,7 @@ module rifl_axis_sync_fifo #
 (
     parameter int DWIDTH = 32,
     parameter int DEPTH = 1,
-    parameter bit OUTPUT_REG = 1
+    parameter bit OUTPUT_REG = 0
 )
 (
     input logic rst,
