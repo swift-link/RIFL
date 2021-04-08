@@ -2,6 +2,7 @@
 module tx_controller # (
     parameter int FRAME_WIDTH = 256,
     parameter int PAYLOAD_WIDTH = 240,
+    parameter int CRC_WIDTH = 12,
     parameter int FRAME_ID_WIDTH = 8
 )
 (
@@ -12,6 +13,9 @@ module tx_controller # (
     input logic pause_req,
     input logic retrans_req,
     input logic compensate,
+    //flow control
+    input logic local_fc,
+    input logic remote_fc,
     input logic [PAYLOAD_WIDTH+1:0] rifl_tx_payload,
     output logic rifl_tx_ready,
     output logic [FRAME_WIDTH-1:0] rifl_tx_data,
@@ -24,6 +28,13 @@ module tx_controller # (
     localparam bit [PAYLOAD_WIDTH+3:0] IDLE_CODE = {2'b10,IDLE_KEY,{(PAYLOAD_WIDTH-14){1'b0}}};
     localparam bit [PAYLOAD_WIDTH+3:0] PAUSE_CODE = {2'b10,PAUSE_KEY,{(PAYLOAD_WIDTH-14){1'b0}}};
     localparam bit [PAYLOAD_WIDTH+3:0] RETRANS_CODE = {2'b10,RETRANS_KEY,{(PAYLOAD_WIDTH-14){1'b0}}};
+
+    //flow control codes
+    localparam bit [7:0] FC_ON_KEY = 8'h01;
+    localparam bit [7:0] FC_OFF_KEY = 8'h02;
+    localparam bit [PAYLOAD_WIDTH+3:0] FC_ON_CODE = {4'b0100,{{(PAYLOAD_WIDTH-8){1'b0}},FC_ON_KEY}};
+    localparam bit [PAYLOAD_WIDTH+3:0] FC_OFF_CODE = {4'b0100,{{(PAYLOAD_WIDTH-8){1'b0}},FC_OFF_KEY}};
+
 //states
     localparam bit [2:0] INIT = 3'd0;
     localparam bit [2:0] SEND_PAUSE = 3'd1;
@@ -32,14 +43,17 @@ module tx_controller # (
     localparam bit [2:0] SEND_RESTRANS = 3'd4;
     localparam bit [2:0] NORMAL = 3'd5;
 
+    //retransmission
     logic shiftreg_ready;
-
     logic retrans_data_in_vld;
     logic [PAYLOAD_WIDTH+1:0] retrans_data_in;
     logic [PAYLOAD_WIDTH+1:0] retrans_data_out;
-
     logic [FRAME_ID_WIDTH+1:0] retrans_counter;
     logic [FRAME_ID_WIDTH:0] rollback_counter;
+    logic [FRAME_ID_WIDTH:0] resume_counter = {1'b1,{FRAME_ID_WIDTH{1'b0}}};
+
+    //flow control
+    logic local_fc_on = 1'b0;
 
     logic [PAYLOAD_WIDTH+3:0] rifl_tx_data_reg = PAUSE_CODE;
 
@@ -73,17 +87,17 @@ module tx_controller # (
     always_ff @(posedge clk) begin
         if (rst)
             rollback_counter <= {(FRAME_ID_WIDTH+1){1'b0}};
-        else if (state == NORMAL && ~rollback_counter[FRAME_ID_WIDTH])
+        else if (state == NORMAL && ~rollback_counter[FRAME_ID_WIDTH] && ~compensate && ~remote_fc && ~(local_fc ^ local_fc_on))
             rollback_counter <= rollback_counter + 1'b1;
     end
 //retransmit counter
 //0~2^(FRAME_ID_WIDTH+1)-1 : EVEN: data from retrans buffer, ODD: idle or RETRANS depends on rx_error
-//2^(FRAME_ID_WIDTH+1)~2^(FRAME_ID_WIDTH+1)+2^FRAME_ID_WIDTH-1 : IDLE, wait for remote_retrans_req to become low
+//2^(FRAME_ID_WIDTH+1)~2^(FRAME_ID_WIDTH+1)+2^(FRAME_ID_WIDTH-1)-1 : IDLE, wait for remote_retrans_req to become low
     always @(posedge clk) begin
         if (rst)
             retrans_counter <= {(FRAME_ID_WIDTH+2){1'b0}};
         else if (state == RETRANS) begin
-            if (retrans_counter[FRAME_ID_WIDTH+1-:2] != 2'b11)
+            if (retrans_counter[FRAME_ID_WIDTH+1-:3] != 3'b101)
                 retrans_counter <= retrans_counter + 1'd1;
             else
                 retrans_counter <= {(FRAME_ID_WIDTH+2){1'b0}};
@@ -92,19 +106,50 @@ module tx_controller # (
 
 //control the retrans buffer input
     always_comb begin
-        if (state == RETRANS && ~retrans_counter[FRAME_ID_WIDTH+1] && ~retrans_counter[0])
+        if (state == RETRANS && ~retrans_counter[FRAME_ID_WIDTH+1] && ~retrans_counter[0]) begin
             retrans_data_in = retrans_data_out;
-        else if (state == NORMAL && ~compensate)
-            retrans_data_in = rifl_tx_payload;
-        else
+            retrans_data_in_vld = 1'b1;
+        end
+        else if (state == NORMAL && ~compensate) begin
+            if (~local_fc_on & local_fc) begin
+                retrans_data_in = FC_ON_CODE[PAYLOAD_WIDTH+1:0];
+                retrans_data_in_vld = 1'b1;
+            end
+            else if (local_fc_on & ~local_fc) begin
+                retrans_data_in = FC_OFF_CODE[PAYLOAD_WIDTH+1:0];
+                retrans_data_in_vld = 1'b1;
+            end
+            else if (~remote_fc & resume_counter[FRAME_ID_WIDTH]) begin
+                retrans_data_in = rifl_tx_payload;
+                retrans_data_in_vld = 1'b1;
+            end
+            else begin
+                retrans_data_in = {(PAYLOAD_WIDTH+2){1'b0}};
+                retrans_data_in_vld = 1'b0;
+            end
+        end
+        else begin
             retrans_data_in = {(PAYLOAD_WIDTH+2){1'b0}};
+            retrans_data_in_vld = 1'b0;
+        end
     end
-    assign retrans_data_in_vld = (state == RETRANS && ~retrans_counter[FRAME_ID_WIDTH+1] && ~retrans_counter[0]) || (state == NORMAL && ~compensate);
+
+//resume counter
+    always_ff @(posedge clk) begin
+        if (rst)
+            resume_counter <= {1'b1,{FRAME_ID_WIDTH{1'b0}}};
+        else if (rx_error)
+            resume_counter <= {(FRAME_ID_WIDTH+1){1'b0}};
+        else if (state == NORMAL && ~resume_counter[FRAME_ID_WIDTH])
+            resume_counter <= resume_counter + 1'b1;
+    end
 
 //output for different situations
     always_ff @(posedge clk) begin
-        if (rst)
+        if (rst) begin
             rifl_tx_data_reg <= PAUSE_CODE;
+            local_fc_on <= 1'b0;
+        end
         else begin
             if (state == INIT)
                 rifl_tx_data_reg <= PAUSE_CODE;
@@ -125,8 +170,16 @@ module tx_controller # (
             else if (state == NORMAL) begin
                 if (compensate)
                     rifl_tx_data_reg <= IDLE_CODE;
-                else if (rifl_tx_payload[PAYLOAD_WIDTH+1-:2] == 2'b00 || ~rollback_counter[FRAME_ID_WIDTH])
-                    rifl_tx_data_reg <= {2'b01,{(PAYLOAD_WIDTH+2){1'b0}}};
+                else if (~local_fc_on & local_fc) begin
+                    rifl_tx_data_reg <= FC_ON_CODE;
+                    local_fc_on <= 1'b1;
+                end
+                else if (local_fc_on & ~local_fc) begin
+                    rifl_tx_data_reg <= FC_OFF_CODE;
+                    local_fc_on <= 1'b0;
+                end
+                else if (remote_fc | ~resume_counter[FRAME_ID_WIDTH])
+                    rifl_tx_data_reg <= IDLE_CODE;
                 else
                     rifl_tx_data_reg <= {2'b01,rifl_tx_payload};
             end
@@ -134,8 +187,11 @@ module tx_controller # (
                 rifl_tx_data_reg <= IDLE_CODE;
         end
     end
-    assign rifl_tx_data = {rifl_tx_data_reg,{(FRAME_WIDTH-PAYLOAD_WIDTH-4){1'b0}}};
-    assign rifl_tx_ready = state == NORMAL && rollback_counter[FRAME_ID_WIDTH] && ~compensate;
+    assign rifl_tx_data = {rifl_tx_data_reg,{CRC_WIDTH{1'b0}}};
+    assign rifl_tx_ready = state == NORMAL && 
+                            ~(local_fc ^ local_fc_on) &&
+                           rollback_counter[FRAME_ID_WIDTH] &&
+                            ~compensate && ~remote_fc && resume_counter[FRAME_ID_WIDTH];
 endmodule
 
 module rifl_shiftreg #(

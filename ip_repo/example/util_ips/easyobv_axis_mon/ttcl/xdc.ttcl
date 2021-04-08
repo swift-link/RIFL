@@ -1,0 +1,18 @@
+<: set en_axil [getIntValue "EN_AXIL"] :>
+<: if {$en_axil == 0} { :>
+<:      return :>
+<: } :>
+<: ;#fix header :>
+<: setFileProcessingOrder late :>
+<: setOutputDirectory "./xdc" :>
+<: setFileName [getComponentNameString] :>
+<: setFileExtension ".xdc" :>
+<: setFileUsedIn {implementation} :>
+set traffic_clk [get_clocks -quiet -of [get_ports clk]]
+set traffic_clk_period [get_property -quiet -min PERIOD $traffic_clk]
+set s_axil_aclk [get_clocks -quiet -of [get_ports s_axil_aclk]]
+set s_axil_aclk_period [get_property -quiet -min PERIOD $s_axil_aclk]
+set_false_path -through [get_ports rst]
+set_false_path -to [get_cells -hier d_meta_reg[0][*]] -quiet
+set_false_path -to [get_cells -hier rst_meta_reg[*]] -quiet
+set_max_delay -from [filter [all_fanout -from [get_ports clk] -flat -endpoints_only] {IS_LEAF}] -through [get_pins -of_obj [get_cells -hier * -filter {NAME=~*mbc_int_reg*}] -filter {DIRECTION==OUT}] [expr min($traffic_clk_period,$s_axil_aclk_period)] -datapath_only

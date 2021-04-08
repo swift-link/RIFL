@@ -46,7 +46,7 @@ module rifl #
     output logic m_axis_tvalid,
     input logic m_axis_tready,
 //error injection
-    input logic [63:0] err_threshold,
+    input logic [63:0] ber_code,
 //stats
     //tx
     output logic [N_CHANNEL-1:0] tx_state_init,
@@ -61,6 +61,9 @@ module rifl #
     output logic [N_CHANNEL-1:0] rx_error,
     output logic [N_CHANNEL-1:0] rx_pause_request,
     output logic [N_CHANNEL-1:0] rx_retrans_request,
+    //flow control
+    output logic [N_CHANNEL-1:0] local_fc,
+    output logic [N_CHANNEL-1:0] remote_fc,
     output logic compensate
 );
     localparam int N_BOUNDING_GRP = FRAME_WIDTH*N_CHANNEL/USER_WIDTH;
@@ -70,9 +73,10 @@ module rifl #
 
     localparam int FRAME_RATIO = FRAME_WIDTH/GT_WIDTH;
     localparam int FRAME_CNT_WIDTH = FRAME_RATIO == 1 ? 1 : $clog2(FRAME_RATIO);
-    localparam int USR_RATIO = N_BOUNDING_GRP;
-    localparam int USR_CNT_WIDTH = USR_RATIO == 1 ? 1 : $clog2(USR_RATIO);
-    localparam bit [2:0] USR_DIV_CODE = USR_RATIO-1;
+    localparam int USER2FRAME_RATIO = N_BOUNDING_GRP;
+    localparam int USER_CNT_WIDTH = USER2FRAME_RATIO == 1 ? 1 : $clog2(USER2FRAME_RATIO);
+    localparam int GT2USER_RATIO = USER_WIDTH/N_CHANNEL/GT_WIDTH;
+    localparam bit [2:0] GT2USER_DIV_CODE = GT2USER_RATIO-1;
     localparam int FRAME_FREQ = int'(LANE_LINE_RATE*10**3/FRAME_WIDTH);
     //set GT latency to 80 ns (normally lower than this)
     localparam real GT_LATENCY = 80.0;
@@ -107,7 +111,7 @@ module rifl #
 
 //rifl
     //error injection
-    logic [63:0] threshold_reg;
+    logic [63:0] ber_code_reg;
     logic [GT_WIDTH*N_CHANNEL-1:0] gt_bit_error;
     //tx
     //rst
@@ -117,7 +121,7 @@ module rifl #
     logic [2:0] tx_state_core[N_BOUNDING_GRP-1:0][CHANNEL_PER_GRP-1:0];
     //clock counters
     logic [FRAME_CNT_WIDTH-1:0] frame_clk_cnt;
-    logic [USR_CNT_WIDTH-1:0] usr_clk_cnt;
+    logic [USER_CNT_WIDTH-1:0] usr_clk_cnt;
     //gt
     logic [GT_WIDTH-1:0] gt_tx_data_core[N_BOUNDING_GRP-1:0][CHANNEL_PER_GRP-1:0];
     //tx narrow axis
@@ -143,6 +147,8 @@ module rifl #
     logic [CHANNEL_PER_GRP-1:0] rx_error_core[N_BOUNDING_GRP-1:0];
     logic [CHANNEL_PER_GRP-1:0] rx_pause_request_core[N_BOUNDING_GRP-1:0];
     logic [CHANNEL_PER_GRP-1:0] rx_retrans_request_core[N_BOUNDING_GRP-1:0];
+    logic [CHANNEL_PER_GRP-1:0] local_fc_core[N_BOUNDING_GRP-1:0];
+    logic [CHANNEL_PER_GRP-1:0] remote_fc_core[N_BOUNDING_GRP-1:0];    
     //gt
     logic [GT_WIDTH-1:0] gt_rx_data_core[N_BOUNDING_GRP-1:0][CHANNEL_PER_GRP-1:0];
     //rx narrow axis
@@ -181,14 +187,14 @@ module rifl #
 //error injection
     if (ERROR_INJ) begin
         always_ff @(posedge usr_clk) begin
-            threshold_reg <= err_threshold;
+            ber_code_reg <= ber_code;
         end
         rifl_err_inj #(
             .DWIDTH (GT_WIDTH*N_CHANNEL),
             .SEED (ERROR_SEED)
         ) u_rifl_err_inj(
-          	.clk       (tx_gt_clk),
-            .threshold (threshold_reg),
+            .clk       (tx_gt_clk),
+            .threshold (ber_code_reg),
             .err_vec   (gt_bit_error)
         );
     end
@@ -197,14 +203,13 @@ module rifl #
             assign gt_bit_error = {GT_WIDTH*N_CHANNEL{1'b0}};
     end
 
-
 //gt
     rifl_gt_wrapper #(
         .N_CHANNEL   (N_CHANNEL),
         .FRAME_WIDTH (FRAME_WIDTH),
         .GT_WIDTH    (GT_WIDTH)
     ) u_rifl_gt_wrapper(
-    	.gt_ref_clk        (gt_ref_clk),
+        .gt_ref_clk        (gt_ref_clk),
         .init_clk          (init_clk),
         .rst               (rst),
         .gt_init_rst       (gt_init_rst),
@@ -231,7 +236,7 @@ module rifl #
     clock_buffer #(
         .RATIO     (FRAME_RATIO)
     ) u_tx_clock_buffer(
-    	.src_clk       (tx_gt_src_clk[0]),
+        .src_clk       (tx_gt_src_clk[0]),
         .rst           (tx_gt_clk_rst),
         .usrclk        (tx_usr_clk),
         .usrclk2       (tx_gt_clk),
@@ -241,7 +246,7 @@ module rifl #
     clock_buffer #(
         .RATIO     (FRAME_RATIO)
     ) u_rx_clock_buffer(
-    	.src_clk       (rx_gt_src_clk[0]),
+        .src_clk       (rx_gt_src_clk[0]),
         .rst           (rx_gt_clk_rst),
         .usrclk        (rx_usr_clk),
         .usrclk2       (rx_gt_clk),
@@ -255,12 +260,12 @@ module rifl #
             .CEMASK(1'b0),
             .CLR(tx_gt_clk_rst),
             .CLRMASK(1'b0),
-            .DIV(USR_DIV_CODE),
+            .DIV(GT2USER_DIV_CODE),
             .I(tx_gt_src_clk[0]),
             .O(usr_clk)
         );
         clock_counter #(
-            .RATIO (USR_RATIO)
+            .RATIO (USER2FRAME_RATIO)
         ) usr_clock_counter(
             .clk_slow (tx_frame_clk),
             .clk_fast (usr_clk),
@@ -289,7 +294,7 @@ module rifl #
         .DWIDTH_IN   (USER_WIDTH),
         .DWIDTH_OUT  (SPATIAL_CB_WIDTH)
     ) u_tx_axis_conv(
-    	.clk           (usr_clk),
+        .clk           (usr_clk),
         .rst           (tx_frame_rst|tx_poweron_rst),
         .s_axis_tdata  (s_axis_tdata),
         .s_axis_tkeep  (s_axis_tkeep),
@@ -308,7 +313,7 @@ module rifl #
             .DWIDTH (SPATIAL_CB_WIDTH),
             .RATIO  (N_BOUNDING_GRP)
         ) u_tx_temporal_cb(
-    	    .clk           (usr_clk),
+            .clk           (usr_clk),
             .rst           (tx_frame_rst|tx_poweron_rst),
             .clk_cnt       (usr_clk_cnt),
             .s_axis_tdata  (tx_narrow_tdata),
@@ -345,7 +350,7 @@ module rifl #
             .CNT_WIDTH      (FRAME_CNT_WIDTH),
             .FRAME_FREQ     (FRAME_FREQ)
         ) u_rifl_core(
-        	.tx_frame_clk          (tx_frame_clk          ),
+            .tx_frame_clk          (tx_frame_clk          ),
             .rst                   (rst                   ),
             .tx_frame_rst          (tx_frame_rst|tx_poweron_rst),
             .rx_frame_rst          (rx_frame_rst          ),
@@ -371,7 +376,9 @@ module rifl #
             .rx_aligned_rx         (rx_aligned_rx_core[i] ),
             .rx_error              (rx_error_core[i]      ),
             .rx_pause_request      (rx_pause_request_core[i]),
-            .rx_retrans_request    (rx_retrans_request_core[i])
+            .rx_retrans_request    (rx_retrans_request_core[i]),
+            .local_fc              (local_fc_core[i]),
+            .remote_fc             (remote_fc_core[i])
         );
     end
 
@@ -380,7 +387,7 @@ module rifl #
             .DWIDTH (SPATIAL_CB_WIDTH),
             .RATIO  (N_BOUNDING_GRP)
         ) u_rx_temporal_cb(
-        	.clk           (usr_clk),
+            .clk           (usr_clk),
             .rst           (tx_frame_rst|tx_poweron_rst),
             .clk_cnt       (usr_clk_cnt),
             .s_axis_tdata  (rifl_core_rx_tdata),
@@ -407,7 +414,7 @@ module rifl #
         .DWIDTH_IN   (SPATIAL_CB_WIDTH),
         .DWIDTH_OUT  (USER_WIDTH)
     ) u_rx_axis_conv(
-    	.clk           (usr_clk),
+        .clk           (usr_clk),
         .rst           (tx_frame_rst|tx_poweron_rst),
         .s_axis_tdata  (rx_narrow_tdata),
         .s_axis_tkeep  (rx_narrow_tkeep),
@@ -446,6 +453,8 @@ module rifl #
             assign rx_error[i*CHANNEL_PER_GRP+j] = rx_error_core[i][j];
             assign rx_pause_request[i*CHANNEL_PER_GRP+j] = rx_pause_request_core[i][j];
             assign rx_retrans_request[i*CHANNEL_PER_GRP+j] = rx_retrans_request_core[i][j];
+            assign local_fc[i*CHANNEL_PER_GRP+j] = local_fc_core[i][j];
+            assign remote_fc[i*CHANNEL_PER_GRP+j] = remote_fc_core[i][j];
         end
     end
 

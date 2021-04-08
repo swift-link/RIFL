@@ -25,7 +25,7 @@ module rifl_axis_sync_fifo #
     logic wr_en_int, rd_en_int;
     logic wr_full_int, rd_empty_int;
 
-    sync_fifo #(
+    rifl_sync_fifo #(
         .DWIDTH   (DWIDTH*9/8+1),
         .DEPTH    (DEPTH)
     ) u_sync_fifo (

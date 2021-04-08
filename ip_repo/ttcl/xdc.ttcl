@@ -72,7 +72,7 @@ set_multicycle_path -quiet -hold -start <=: [expr $USER_GT_CLK_RATIO-1] :> -from
 set_max_delay -from [filter [all_fanout -from $init_clk_src -flat -endpoints_only] {IS_LEAF}] -through [get_pins -of_obj [get_cells -hier * -filter {NAME=~*mbc_int_reg*}] -filter {DIRECTION==OUT}] $frame_period -datapath_only
 <: if {$ERROR_INJ != 0} { :>
 #error injection
-set_false_path -through [get_ports err_threshold[*]]
-set_false_path -from [get_pins -hier -filter {NAME =~ *threshold_reg_reg[*]/C}]
+set_false_path -through [get_ports ber_code[*]]
+set_false_path -from [get_pins -hier -filter {NAME =~ *ber_code_reg_reg[*]/C}]
 set_false_path -from [get_pins -hier -filter {NAME =~ *u_rifl_err_inj/err_vec_reg[*]/C}]
 <: } :>
