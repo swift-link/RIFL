@@ -19,7 +19,7 @@ module rifl_tx #
     output logic [GT_WIDTH-1:0] gt_tx_data,
 ////user data interface
     input logic [PAYLOAD_WIDTH-1:0] tx_lane_tdata,
-    input logic [7:0] tx_lane_byte_cnt,
+    input logic [PAYLOAD_WIDTH/8-1:0] tx_lane_tkeep,
     input logic tx_lane_tlast,
     input logic tx_lane_tvalid,
     output logic tx_lane_tready,
@@ -31,6 +31,9 @@ module rifl_tx #
     input logic pause_req,
     input logic retrans_req,
     input logic compensate,
+    //flow control
+    input logic local_fc,
+    input logic remote_fc,
     output logic [2:0] tx_state
 );
     logic [PAYLOAD_WIDTH+1:0] rifl_tx_payload;
@@ -45,10 +48,8 @@ module rifl_tx #
     rifl_encode #(
         .PAYLOAD_WIDTH (PAYLOAD_WIDTH )
     ) u_rifl_encode(
-    	.clk             (tx_frame_clk    ),
-        .rst             (tx_frame_rst    ),
         .tx_lane_tdata   (tx_lane_tdata   ),
-        .tx_lane_byte_cnt(tx_lane_byte_cnt),
+        .tx_lane_tkeep   (tx_lane_tkeep   ),
         .tx_lane_tlast   (tx_lane_tlast   ),
         .tx_lane_tvalid  (tx_lane_tvalid  ),
         .tx_lane_tready  (tx_lane_tready  ),
@@ -59,6 +60,7 @@ module rifl_tx #
     tx_controller #(
         .FRAME_WIDTH    (FRAME_WIDTH),
         .PAYLOAD_WIDTH  (PAYLOAD_WIDTH),
+        .CRC_WIDTH      (CRC_WIDTH),
         .FRAME_ID_WIDTH (FRAME_ID_WIDTH)
     ) u_tx_controller(
         .*,

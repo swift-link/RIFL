@@ -1,0 +1,200 @@
+<: ;#fix header :>
+<: set ComponentName [getComponentNameString] :>
+<: setFileName [ttcl_string_concat [getComponentNameString] "_tb"] :>
+<: setFileExtension ".sv" :>
+<: setOutputDirectory "./" :>
+<: set N_CHANNEL [getIntValue "N_CHANNEL"] :>
+<: set GT_REF_FREQ [getIntValue "GT_REF_FREQ"] :>
+<: set GT_REF_PERIOD [format %.3f [expr 1000.0/$GT_REF_FREQ]] :>
+<: set LANE_LINE_RATE [getStringValue "LANE_LINE_RATE"] :>
+<: set USER_WIDTH [getIntValue "USER_WIDTH"] :>
+<: set USR_PERIOD [format %.3f [expr ($USER_WIDTH*1.0)/($N_CHANNEL*$LANE_LINE_RATE)]] :>
+<: set FRAME_WIDTH [getIntValue "FRAME_WIDTH"] :>
+<: set CRC_WIDTH [getIntValue "CRC_WIDTH"] :>
+<: set PKT_SIZE_UNIT [expr int(($FRAME_WIDTH-4-$CRC_WIDTH)/8*($USER_WIDTH/$FRAME_WIDTH))] :>
+`timescale 1ps/1ps
+module tb();
+    localparam int N_CHANNEL = <=: $N_CHANNEL :>;
+    localparam realtime GT_REF_PERIOD = <=: $GT_REF_PERIOD :>ns;
+    localparam bit [31:0] N_PKT = 1000;
+    localparam real USR_PERIOD = <=: $USR_PERIOD :>;
+    localparam int PKT_SIZE_UNIT = <=: $PKT_SIZE_UNIT :>;
+    //clk
+    logic gt_ref_clk_p, gt_ref_clk_n;
+    logic init_clk;
+    //rst
+    logic rifl_rst;
+    logic traffic_rst;
+    //gt pins
+    logic [N_CHANNEL-1:0] gt_p, gt_n;
+    //traffic control
+    logic start;
+    logic clear;
+    logic [15:0] pkt_len_min, pkt_len_max;
+    logic [63:0] idle_ratio_code;
+    logic [63:0] bp_ratio_code;
+    //BER
+    logic [63:0] ber_code;
+    //axis mon results
+    logic [63:0] tx_pkt_cnt, rx_pkt_cnt;
+    logic [63:0] rx_time_elapsed;
+    logic [63:0] transferred_size;
+    logic [63:0] latency_sum;
+    logic mismatch;
+    //rifl stats
+    logic [N_CHANNEL-1:0] rx_aligned;
+    logic [N_CHANNEL-1:0] rx_up;
+    logic [N_CHANNEL-1:0] tx_state_normal;
+
+    rifl_ex_sim u_rifl_ex_sim(
+        //clks
+        .gt_ref_clk_n                    (gt_ref_clk_n),
+        .gt_ref_clk_p                    (gt_ref_clk_p),
+        .init_clk                        (init_clk),
+        //rst
+        .rifl_rst                        (rifl_rst),
+        .traffic_rst                     (traffic_rst),
+        //gt ports
+        .rifl_gt_gt_rxn_in               (gt_n),
+        .rifl_gt_gt_rxp_in               (gt_p),
+        .rifl_gt_gt_txn_out              (gt_n),
+        .rifl_gt_gt_txp_out              (gt_p),
+        //traffic control
+        .start                           (start),
+        .done                            (),
+        .clear                           (clear),
+        .pkt_cnt_limit                   (N_PKT),
+        .pkt_len_max                     (pkt_len_max),
+        .pkt_len_min                     (pkt_len_min),
+        .idle_ratio_code                 (idle_ratio_code),
+        .bp_ratio_code                   (bp_ratio_code),
+        //bit error ratio
+        .ber_code                        (ber_code),
+        //axis mon results
+        .dbg_tx_pkt_cnt                  (tx_pkt_cnt),
+        .dbg_tx_time_elapsed             (),
+        .dbg_tx_transferred_size         (transferred_size),
+        .dbg_rx_pkt_cnt                  (rx_pkt_cnt),
+        .dbg_rx_time_elapsed             (rx_time_elapsed),
+        .dbg_rx_transferred_size         (),
+        .dbg_latency_sum                 (latency_sum),
+        .dbg_mismatch                    (mismatch),
+        .dbg_time_cnt                    (),
+        //rifl stats
+        .rifl_stat_compensate            (),
+        .rifl_stat_local_fc              (),
+        .rifl_stat_remote_fc             (),
+        .rifl_stat_rx_aligned            (rx_aligned),
+        .rifl_stat_rx_error              (),
+        .rifl_stat_rx_pause_request      (),
+        .rifl_stat_rx_retrans_request    (),
+        .rifl_stat_rx_up                 (rx_up),
+        .rifl_stat_tx_state_init         (),
+        .rifl_stat_tx_state_normal       (tx_state_normal),
+        .rifl_stat_tx_state_pause        (),
+        .rifl_stat_tx_state_retrans      (),
+        .rifl_stat_tx_state_send_pause   (),
+        .rifl_stat_tx_state_send_retrans ()
+    );
+//error check
+    initial begin
+        wait(mismatch === 1'b1);
+        $display("[%0t] : detected mismatch, TEST FAILED!", $time);
+        #100ns;
+        $finish;
+    end
+//main
+    initial begin
+        rifl_rst = 1'b1;
+        traffic_rst = 1'b1;
+        start = 1'b0;
+        clear = 1'b0;
+        pkt_len_min = 16'd1;
+        pkt_len_max = 16'd2048;
+        idle_ratio_code = 64'd0;
+        bp_ratio_code = 64'd0;
+        ber_code = 64'd0;
+        repeat(10) @(posedge init_clk);
+        rifl_rst = 1'b0;
+        wait(&rx_aligned === 1'b1);
+        $display("[%0t] : all lanes are aligned", $time);
+        traffic_rst = 1'b0;
+        wait(&rx_up === 1'b1);
+        $display("[%0t] : all lanes are up", $time);
+        wait(&tx_state_normal === 1'b1);
+        $display("[%0t] : all lanes enter normal state", $time);
+        repeat(100) @(posedge init_clk);
+        //send traffic with 100% cycle valid ratio, 0% backpressure
+        $display("[%0t] : starting correctness test", $time);
+        start = 1'b1;
+        #100ns;
+        start = 1'b0;
+        wait(tx_pkt_cnt === N_PKT/4);
+        //change the backpressure ratio to 30%
+        bp_ratio_code = 0.3*64'hffffffffffffffff;
+        wait(tx_pkt_cnt === N_PKT/2);
+        //change the traffic idle ratio to 60%
+        idle_ratio_code = 0.6*64'hffffffffffffffff;
+        wait(tx_pkt_cnt === N_PKT/4*3);
+        //change the backpressure ratio back to 0
+        bp_ratio_code = 64'b0;
+        wait(rx_pkt_cnt === N_PKT);
+        $display("[%0t] : correctness test PASSED", $time);
+        for (int i = 1; i <= 10; i++) begin
+            $display("[%0t] : starting performance test for packet size: %0d bytes", $time, PKT_SIZE_UNIT*i);
+            pkt_len_min = i*PKT_SIZE_UNIT;
+            pkt_len_max = i*PKT_SIZE_UNIT;
+            idle_ratio_code = 64'b0;
+            clear = 1'b1;
+            #100ns;
+            clear = 1'b0;
+            #100ns;
+            start = 1'b1;
+            #100ns;
+            start = 1'b0;
+            wait(rx_pkt_cnt === N_PKT);
+            $display("[%0t] : performance test PASSED for packet size: %0d bytes", $time, PKT_SIZE_UNIT*i);
+            $display("[%0t] : bandwidth: %.2f Gbps / %.2f Mpps", $time, 
+                        real'(transferred_size*8)/(real'(rx_time_elapsed)*USR_PERIOD),
+                        1000.0*real'(rx_pkt_cnt)/(real'(rx_time_elapsed)*USR_PERIOD)
+                    );
+            $display("[%0t] : latency: %.2f ns", $time, real'(latency_sum)/real'(rx_pkt_cnt)*USR_PERIOD);
+        end
+        for (real ber = 1.0e-7; ber <= 1.0e-5; ber *= 10) begin
+            $display("[%0t] : starting reliability test, BER = %.1e", $time, ber);
+            clear = 1'b1;
+            idle_ratio_code = 0.2*64'hffffffffffffffff;
+            bp_ratio_code = 0.3*64'hffffffffffffffff;
+            ber_code = ber*64'hffffffffffffffff;
+            pkt_len_min = 16'd1;
+            pkt_len_max = 16'd2048;
+            #100ns;
+            clear = 1'b0;
+            #100ns;
+            start = 1'b1;
+            #100ns;
+            start = 1'b0;
+            wait(rx_pkt_cnt === N_PKT);
+            $display("[%0t] : reliability test PASSED for BER = %.1e", $time, ber);
+        end
+        #100ns;
+        $display("[%0t] : All test PASSED!", $time);
+        $finish;
+    end
+
+//generate clocks
+    initial begin
+        gt_ref_clk_p = 1'b1;
+        forever begin
+            #(GT_REF_PERIOD/2) gt_ref_clk_p = ~gt_ref_clk_p;
+        end
+    end
+    assign gt_ref_clk_n = ~gt_ref_clk_p;
+
+    initial begin
+        init_clk = 1'b1;
+        forever begin
+            #(10ns/2) init_clk = ~init_clk;
+        end
+    end
+endmodule

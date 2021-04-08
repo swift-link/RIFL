@@ -33,7 +33,10 @@ module rifl_rx #
     output logic rx_up,
     output logic rx_error,
     output logic pause_req,
-    output logic retrans_req
+    output logic retrans_req,
+    //flow control
+    output logic local_fc,
+    output logic remote_fc
 );
     localparam int BUFFER_DEPTH = 1 << (FRAME_ID_WIDTH+1);
     localparam int PAUSE_ON_VAL = 2*BUFFER_DEPTH/3;
@@ -50,7 +53,6 @@ module rifl_rx #
 //rx aligner
     logic [GT_WIDTH-1:0] gt_rx_data_aligned;
     logic sof_aligner;
-    logic rx_up_unsynced;
 //verification code validation
     logic crc_good, isdata;
 //descrambler
@@ -65,6 +67,9 @@ module rifl_rx #
     logic dwidth_conv_out_tvalid;
 //rx user buffer
     logic [$clog2(BUFFER_DEPTH):0] rxbuffer_cnt;
+
+//debug
+    logic s_ready;
 
     rx_aligner #(
         .DWIDTH        (GT_WIDTH),
@@ -137,6 +142,21 @@ module rifl_rx #
         .m_axis_tready (1'b1)
     );
 
+    remote_fc_detector #(
+        .DWIDTH      (GT_WIDTH),
+        .FRAME_WIDTH (FRAME_WIDTH),
+        .CRC_WIDTH   (CRC_WIDTH)
+    ) u_remote_fc_detector(
+    	.tx_gt_clk    (tx_gt_clk),
+        .tx_frame_clk (tx_frame_clk),
+        .rst          (tx_frame_rst),
+        .din          (dwidth_conv_in[GT_WIDTH-1:0]),
+        .data_sof     (dwidth_conv_in[GT_WIDTH]),
+        .crc_good     (dwidth_conv_in[GT_WIDTH+1]),
+        .din_valid    (dwidth_conv_in_vld),
+        .remote_fc    (remote_fc)
+    );
+
     rx_dwidth_conv #(
         .DWIDTH (GT_WIDTH),
         .FRAME_WIDTH (FRAME_WIDTH),
@@ -159,34 +179,33 @@ module rifl_rx #
     ) u_rifl_axis_sync_fifo(
     	.rst           (tx_frame_rst),
         .clk           (tx_frame_clk),
-        .s_axis_tdata  (dwidth_conv_out_tdata  ),
-        .s_axis_tkeep  (dwidth_conv_out_tkeep  ),
-        .s_axis_tlast  (dwidth_conv_out_tlast  ),
-        .s_axis_tvalid (dwidth_conv_out_tvalid ),
-        .s_axis_tready (),
-        .m_axis_tdata  (rx_lane_tdata ),
-        .m_axis_tkeep  (rx_lane_tkeep ),
-        .m_axis_tlast  (rx_lane_tlast ),
+        .s_axis_tdata  (dwidth_conv_out_tdata),
+        .s_axis_tkeep  (dwidth_conv_out_tkeep),
+        .s_axis_tlast  (dwidth_conv_out_tlast),
+        .s_axis_tvalid (dwidth_conv_out_tvalid),
+        .s_axis_tready (s_ready),
+        .m_axis_tdata  (rx_lane_tdata),
+        .m_axis_tkeep  (rx_lane_tkeep),
+        .m_axis_tlast  (rx_lane_tlast),
         .m_axis_tvalid (rx_lane_tvalid),
         .m_axis_tready (rx_lane_tready),
-        .fifo_cnt      (rxbuffer_cnt  )
+        .fifo_cnt      (rxbuffer_cnt)
     );
     
     rx_cdc u_rx_cdc(.*);
 
-/*
-    remove this logic temporarily, there will be a new method handing back pressure
     always_ff @(posedge tx_frame_clk) begin
         if (tx_frame_rst)
-            rx_up_user <= 1'b1;
-        else if (rxbuffer_cnt >= PAUSE_ON_VAL)
-            rx_up_user <= 1'b0;
-        else if (rxbuffer_cnt <= PAUSE_OFF_VAL)
-            rx_up_user <= 1'b1;
+            local_fc <= 1'b0;
+        else if (rxbuffer_cnt > PAUSE_ON_VAL)
+            local_fc <= 1'b1;
+        else if (rxbuffer_cnt < PAUSE_OFF_VAL)
+            local_fc <= 1'b0;
     end
-*/
+
     assign rx_up = rx_up_tx;
     assign rx_error = rx_error_tx;
     assign pause_req = pause_req_tx;
     assign retrans_req = retrans_req_tx;
+
 endmodule

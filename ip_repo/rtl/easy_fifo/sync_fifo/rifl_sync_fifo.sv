@@ -1,5 +1,5 @@
 `timescale 1ns/1ps
-module sync_fifo #
+module rifl_sync_fifo #
 (
     parameter int DWIDTH = 32,
     parameter int DEPTH = 512

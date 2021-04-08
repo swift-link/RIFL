@@ -26,7 +26,7 @@ module rifl_err_inj #
 
     genvar i;
     for (i = 0; i < DWIDTH; i++) begin
-        xoshiro128ss #(
+        rifl_xoshiro128ss #(
             .S0 (`GET_STATE(SEED+(`A+`B*(i*2)))),
             .S1 (`GET_STATE(SEED+(`A+`B*(i*2+1))))
         ) u_xoshiro128ss(

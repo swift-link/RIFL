@@ -14,20 +14,20 @@ module vcode_val #
     input logic sof,
     input logic rx_up,
     input logic [DWIDTH-1:0] data_in,
-    output logic crc_good_out = 1'b0,
-    output logic rx_error = 1'b0,
-    output logic isdata = 1'b0
+    (* keep = "true" *) output logic crc_good_out = 1'b0,
+    (* keep = "true" *) output logic rx_error = 1'b0,
+    (* keep = "true" *) output logic isdata = 1'b0
 );
     localparam bit [FRAME_ID_WIDTH-1:0] ROLLBACK_CYCLES = 'd16;
 
     logic [DWIDTH-1:0] data_int;
     logic [CRC_WIDTH-1:0] crc_golden;
 
-    logic [FRAME_ID_WIDTH-1:0] frame_id;
-    logic [FRAME_ID_WIDTH-1:0] frame_id_threshold = ROLLBACK_CYCLES;
+    (* keep = "true" *) logic [FRAME_ID_WIDTH-1:0] frame_id;
+    (* keep = "true" *) logic [FRAME_ID_WIDTH-1:0] frame_id_threshold = ROLLBACK_CYCLES;
 
     logic [CRC_WIDTH-1:0] crc_int_in, crc_int_out;
-    logic [CRC_WIDTH-1:0] crc_previous;
+    (* keep = "true" *) logic [CRC_WIDTH-1:0] crc_previous;
     logic crc_good;
 
     always_comb begin
@@ -50,7 +50,7 @@ module vcode_val #
                 frame_id_threshold <= ROLLBACK_CYCLES;
                 rx_error <= 1'b0;
             end
-            else if (sof & rx_up) begin
+            else if (rx_up) begin
                 if (crc_good && data_in[DWIDTH-1-:2] == 2'b01)
                     frame_id <= frame_id + 1'b1;
                 else if (~crc_good)
@@ -87,7 +87,7 @@ module vcode_val #
     else begin
         localparam int CNT_WIDTH = $clog2(FRAME_WIDTH/DWIDTH) == 0 ? 1 : $clog2(FRAME_WIDTH/DWIDTH);
         localparam bit [CNT_WIDTH-1:0] TAIL_CNT = (1 << $clog2(FRAME_WIDTH/DWIDTH)) - 1;
-        logic [CNT_WIDTH-1:0] cnt = {CNT_WIDTH{1'b0}};
+        (* keep = "true" *) logic [CNT_WIDTH-1:0] cnt = {CNT_WIDTH{1'b0}};
         always_ff @(posedge clk) begin
             if (rst)
                 cnt <= 'b0;

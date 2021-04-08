@@ -55,11 +55,14 @@ module rifl_core #
     output logic [N_CHANNEL-1:0] rx_aligned_rx,
     output logic [N_CHANNEL-1:0] rx_error,
     output logic [N_CHANNEL-1:0] rx_pause_request,
-    output logic [N_CHANNEL-1:0] rx_retrans_request
+    output logic [N_CHANNEL-1:0] rx_retrans_request,
+    //flow control
+    output logic [N_CHANNEL-1:0] local_fc,
+    output logic [N_CHANNEL-1:0] remote_fc
 );
 //tx
     logic [PAYLOAD_WIDTH-1:0] tx_lane_tdata[N_CHANNEL-1:0];
-    logic [7:0] tx_lane_byte_cnt[N_CHANNEL-1:0];
+    logic [PAYLOAD_WIDTH/8-1:0] tx_lane_tkeep[N_CHANNEL-1:0];
     logic [N_CHANNEL-1:0] tx_lane_tlast;
     logic [N_CHANNEL-1:0] tx_lane_tvalid;
     logic [N_CHANNEL-1:0] tx_lane_tready;
@@ -85,7 +88,7 @@ module rifl_core #
         .s_axis_tvalid   (rifl_core_tx_tvalid),
         .s_axis_tready   (rifl_core_tx_tready),
         .m_axis_tdata    (tx_lane_tdata),
-        .m_axis_byte_cnt (tx_lane_byte_cnt),
+        .m_axis_tkeep    (tx_lane_tkeep),
         .m_axis_tlast    (tx_lane_tlast),
         .m_axis_tvalid   (tx_lane_tvalid),
         .m_axis_tready   (tx_lane_tready)
@@ -109,7 +112,7 @@ module rifl_core #
             .tx_frame_rst     (tx_frame_rst),
             .gt_tx_data       (gt_tx_data[i]),
             .tx_lane_tdata    (tx_lane_tdata[i]),
-            .tx_lane_byte_cnt (tx_lane_byte_cnt[i]),
+            .tx_lane_tkeep    (tx_lane_tkeep[i]),
             .tx_lane_tlast    (tx_lane_tlast[i]),
             .tx_lane_tvalid   (tx_lane_tvalid[i]),
             .tx_lane_tready   (tx_lane_tready[i]),
@@ -119,7 +122,9 @@ module rifl_core #
             .pause_req        (rx_pause_request[i]),
             .retrans_req      (rx_retrans_request[i]),
             .compensate       (compensate),
-            .tx_state         (tx_state[i])
+            .tx_state         (tx_state[i]),
+            .local_fc         (local_fc[i]),
+            .remote_fc        (remote_fc[i])
         );
 
         rifl_rx #(
@@ -152,7 +157,9 @@ module rifl_core #
             .rx_up          (rx_up[i]),
             .rx_error       (rx_error[i]),
             .pause_req      (rx_pause_request[i]),
-            .retrans_req    (rx_retrans_request[i])
+            .retrans_req    (rx_retrans_request[i]),
+            .local_fc       (local_fc[i]),
+            .remote_fc      (remote_fc[i])
         );
     end
 
