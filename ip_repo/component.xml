@@ -366,14 +366,14 @@
         <spirit:displayName>Synthesis</spirit:displayName>
         <spirit:envIdentifier>:vivado.xilinx.com:synthesis</spirit:envIdentifier>
         <spirit:language>SystemVerilog</spirit:language>
-        <spirit:modelName>rifl</spirit:modelName>
+        <spirit:modelName>RIFL</spirit:modelName>
         <spirit:fileSetRef>
           <spirit:localName>xilinx_anylanguagesynthesis_view_fileset</spirit:localName>
         </spirit:fileSetRef>
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>b9c11f70</spirit:value>
+            <spirit:value>e44b8b68</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -382,14 +382,14 @@
         <spirit:displayName>Simulation</spirit:displayName>
         <spirit:envIdentifier>:vivado.xilinx.com:simulation</spirit:envIdentifier>
         <spirit:language>SystemVerilog</spirit:language>
-        <spirit:modelName>rifl</spirit:modelName>
+        <spirit:modelName>RIFL</spirit:modelName>
         <spirit:fileSetRef>
           <spirit:localName>xilinx_anylanguagebehavioralsimulation_view_fileset</spirit:localName>
         </spirit:fileSetRef>
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>b9c11f70</spirit:value>
+            <spirit:value>e44b8b68</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -403,7 +403,21 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>2b08e4bc</spirit:value>
+            <spirit:value>8c929e4b</spirit:value>
+          </spirit:parameter>
+        </spirit:parameters>
+      </spirit:view>
+      <spirit:view>
+        <spirit:name>xilinx_utilityxitfiles</spirit:name>
+        <spirit:displayName>Utility XIT/TTCL</spirit:displayName>
+        <spirit:envIdentifier>:vivado.xilinx.com:xit.util</spirit:envIdentifier>
+        <spirit:fileSetRef>
+          <spirit:localName>xilinx_utilityxitfiles_view_fileset</spirit:localName>
+        </spirit:fileSetRef>
+        <spirit:parameters>
+          <spirit:parameter>
+            <spirit:name>viewChecksum</spirit:name>
+            <spirit:value>8936f3d6</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -420,7 +434,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>8b6ba386</spirit:value>
+            <spirit:value>5be7fb85</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -434,7 +448,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>1c392941</spirit:value>
+            <spirit:value>91dd79f8</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -448,7 +462,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>b88b8049</spirit:value>
+            <spirit:value>f2858a46</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -462,7 +476,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>23fe9530</spirit:value>
+            <spirit:value>557226cd</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -476,7 +490,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>e42a3a3c</spirit:value>
+            <spirit:value>5b03c91f</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -1071,25 +1085,20 @@
         <spirit:displayName>N Channel</spirit:displayName>
         <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.N_CHANNEL">1</spirit:value>
       </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="signed">
-        <spirit:name>LANE_LINE_RATE</spirit:name>
-        <spirit:displayName>Lane Line Rate</spirit:displayName>
-        <spirit:value spirit:format="float" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.LANE_LINE_RATE">28</spirit:value>
-      </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="signed">
-        <spirit:name>GT_REF_FREQ</spirit:name>
-        <spirit:displayName>Gt Ref Freq</spirit:displayName>
-        <spirit:value spirit:format="float" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.GT_REF_FREQ">100</spirit:value>
-      </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="string">
-        <spirit:name>MASTER_CHAN</spirit:name>
-        <spirit:displayName>Master Chan</spirit:displayName>
-        <spirit:value spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.MASTER_CHAN">UNDEFINED</spirit:value>
-      </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="int">
         <spirit:name>GT_WIDTH</spirit:name>
         <spirit:displayName>Gt Width</spirit:displayName>
         <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.GT_WIDTH">64</spirit:value>
+      </spirit:modelParameter>
+      <spirit:modelParameter spirit:dataType="int">
+        <spirit:name>GT_INT_WIDTH</spirit:name>
+        <spirit:displayName>Gt Int Width</spirit:displayName>
+        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.GT_INT_WIDTH">64</spirit:value>
+      </spirit:modelParameter>
+      <spirit:modelParameter spirit:dataType="signed">
+        <spirit:name>LANE_LINE_RATE</spirit:name>
+        <spirit:displayName>Lane Line Rate</spirit:displayName>
+        <spirit:value spirit:format="float" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.LANE_LINE_RATE">28</spirit:value>
       </spirit:modelParameter>
       <spirit:modelParameter spirit:dataType="bit">
         <spirit:name>ERROR_INJ</spirit:name>
@@ -1116,29 +1125,13 @@
         <spirit:displayName>Frame Width</spirit:displayName>
         <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.FRAME_WIDTH">256</spirit:value>
       </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="int">
-        <spirit:name>CRC_WIDTH</spirit:name>
-        <spirit:displayName>Crc Width</spirit:displayName>
-        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.CRC_WIDTH">12</spirit:value>
-      </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="int">
-        <spirit:name>CRC_POLY</spirit:name>
-        <spirit:displayName>Crc Poly</spirit:displayName>
-        <spirit:value spirit:format="bitString" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.CRC_POLY" spirit:bitStringLength="12">0x02F</spirit:value>
-      </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="int">
-        <spirit:name>SCRAMBLER_N1</spirit:name>
-        <spirit:displayName>Scrambler N1</spirit:displayName>
-        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.SCRAMBLER_N1">13</spirit:value>
-      </spirit:modelParameter>
-      <spirit:modelParameter spirit:dataType="int">
-        <spirit:name>SCRAMBLER_N2</spirit:name>
-        <spirit:displayName>Scrambler N2</spirit:displayName>
-        <spirit:value spirit:format="long" spirit:resolve="generated" spirit:id="MODELPARAM_VALUE.SCRAMBLER_N2">33</spirit:value>
-      </spirit:modelParameter>
     </spirit:modelParameters>
   </spirit:model>
   <spirit:choices>
+    <spirit:choice>
+      <spirit:name>choice_list_07672d9c</spirit:name>
+      <spirit:enumeration>GTY</spirit:enumeration>
+    </spirit:choice>
     <spirit:choice>
       <spirit:name>choice_list_256c6666</spirit:name>
       <spirit:enumeration>1</spirit:enumeration>
@@ -1147,9 +1140,38 @@
       <spirit:enumeration>4</spirit:enumeration>
     </spirit:choice>
     <spirit:choice>
-      <spirit:name>choice_list_caf711fa</spirit:name>
-      <spirit:enumeration>GTY</spirit:enumeration>
-      <spirit:enumeration>GTH</spirit:enumeration>
+      <spirit:name>choice_list_4ac14356</spirit:name>
+      <spirit:enumeration>X0Y0</spirit:enumeration>
+    </spirit:choice>
+    <spirit:choice>
+      <spirit:name>choice_list_83ef8dc4</spirit:name>
+      <spirit:enumeration>128</spirit:enumeration>
+      <spirit:enumeration>256</spirit:enumeration>
+      <spirit:enumeration>512</spirit:enumeration>
+      <spirit:enumeration>1024</spirit:enumeration>
+    </spirit:choice>
+    <spirit:choice>
+      <spirit:name>choice_list_cb3853fd</spirit:name>
+      <spirit:enumeration>0</spirit:enumeration>
+      <spirit:enumeration>1</spirit:enumeration>
+      <spirit:enumeration>2</spirit:enumeration>
+      <spirit:enumeration>3</spirit:enumeration>
+      <spirit:enumeration>4</spirit:enumeration>
+      <spirit:enumeration>5</spirit:enumeration>
+      <spirit:enumeration>6</spirit:enumeration>
+      <spirit:enumeration>7</spirit:enumeration>
+      <spirit:enumeration>8</spirit:enumeration>
+      <spirit:enumeration>9</spirit:enumeration>
+      <spirit:enumeration>10</spirit:enumeration>
+      <spirit:enumeration>11</spirit:enumeration>
+      <spirit:enumeration>12</spirit:enumeration>
+      <spirit:enumeration>13</spirit:enumeration>
+      <spirit:enumeration>14</spirit:enumeration>
+      <spirit:enumeration>15</spirit:enumeration>
+    </spirit:choice>
+    <spirit:choice>
+      <spirit:name>choice_list_f4b6a108</spirit:name>
+      <spirit:enumeration>256</spirit:enumeration>
     </spirit:choice>
     <spirit:choice>
       <spirit:name>choice_pairs_2d96f706</spirit:name>
@@ -1160,6 +1182,10 @@
   <spirit:fileSets>
     <spirit:fileSet>
       <spirit:name>xilinx_anylanguagesynthesis_view_fileset</spirit:name>
+      <spirit:file>
+        <spirit:name>rtl/rifl/top/RIFL.sv</spirit:name>
+        <spirit:fileType>systemVerilogSource</spirit:fileType>
+      </spirit:file>
       <spirit:file>
         <spirit:name>rtl/easy_fifo/async_fifo/async_fifo.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
@@ -1202,10 +1228,6 @@
       </spirit:file>
       <spirit:file>
         <spirit:name>rtl/rifl/rx/remote_fc_detector.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>rtl/rifl/top/rifl.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
@@ -1353,6 +1375,10 @@
     <spirit:fileSet>
       <spirit:name>xilinx_anylanguagebehavioralsimulation_view_fileset</spirit:name>
       <spirit:file>
+        <spirit:name>rtl/rifl/top/RIFL.sv</spirit:name>
+        <spirit:fileType>systemVerilogSource</spirit:fileType>
+      </spirit:file>
+      <spirit:file>
         <spirit:name>rtl/easy_fifo/async_fifo/async_fifo.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
@@ -1394,10 +1420,6 @@
       </spirit:file>
       <spirit:file>
         <spirit:name>rtl/rifl/rx/remote_fc_detector.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>rtl/rifl/top/rifl.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
       <spirit:file>
@@ -1546,8 +1568,15 @@
       <spirit:file>
         <spirit:name>xgui/RIFL_v1_0.tcl</spirit:name>
         <spirit:fileType>tclSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_2b08e4bc</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_8c929e4b</spirit:userFileType>
         <spirit:userFileType>XGUI_VERSION_2</spirit:userFileType>
+      </spirit:file>
+    </spirit:fileSet>
+    <spirit:fileSet>
+      <spirit:name>xilinx_utilityxitfiles_view_fileset</spirit:name>
+      <spirit:file>
+        <spirit:name>tcl/util.tcl</spirit:name>
+        <spirit:fileType>tclSource</spirit:fileType>
       </spirit:file>
     </spirit:fileSet>
     <spirit:fileSet>
@@ -1592,8 +1621,8 @@
     <spirit:fileSet>
       <spirit:name>xilinx_examples_view_fileset</spirit:name>
       <spirit:file>
-        <spirit:name>example/example.xdc</spirit:name>
-        <spirit:userFileType>xdc</spirit:userFileType>
+        <spirit:name>example/example_xdc.ttcl</spirit:name>
+        <spirit:userFileType>ttcl</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
     <spirit:fileSet>
@@ -1604,7 +1633,7 @@
       </spirit:file>
     </spirit:fileSet>
   </spirit:fileSets>
-  <spirit:description>rifl_v1_0</spirit:description>
+  <spirit:description>RIFL_v1_0</spirit:description>
   <spirit:parameters>
     <spirit:parameter>
       <spirit:name>N_CHANNEL</spirit:name>
@@ -1612,106 +1641,78 @@
       <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.N_CHANNEL" spirit:choiceRef="choice_list_256c6666">1</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
+      <spirit:name>GT_WIDTH</spirit:name>
+      <spirit:displayName>Gt Width</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.GT_WIDTH">64</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>GT_INT_WIDTH</spirit:name>
+      <spirit:displayName>Gt Int Width</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.GT_INT_WIDTH">64</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
       <spirit:name>LANE_LINE_RATE</spirit:name>
       <spirit:displayName>Line Rate per Lane (Gbps)</spirit:displayName>
       <spirit:value spirit:format="float" spirit:resolve="user" spirit:id="PARAM_VALUE.LANE_LINE_RATE" spirit:minimum="1.0" spirit:maximum="28.0">28.0</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
-      <spirit:name>GT_REF_FREQ</spirit:name>
-      <spirit:displayName>GT Ref Clock Frequency (MHz)</spirit:displayName>
-      <spirit:value spirit:format="float" spirit:resolve="user" spirit:id="PARAM_VALUE.GT_REF_FREQ" spirit:minimum="100.0" spirit:maximum="800.0">100</spirit:value>
-    </spirit:parameter>
-    <spirit:parameter>
-      <spirit:name>MASTER_CHAN</spirit:name>
-      <spirit:displayName>Master Channel</spirit:displayName>
-      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.MASTER_CHAN">UNDEFINED</spirit:value>
-    </spirit:parameter>
-    <spirit:parameter>
-      <spirit:name>GT_WIDTH</spirit:name>
-      <spirit:displayName>GT bus width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.GT_WIDTH">64</spirit:value>
-    </spirit:parameter>
-    <spirit:parameter>
       <spirit:name>ERROR_INJ</spirit:name>
-      <spirit:displayName>Enable error injection</spirit:displayName>
+      <spirit:displayName>Enable Error Injection</spirit:displayName>
       <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.ERROR_INJ" spirit:choiceRef="choice_pairs_2d96f706">0</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>ERROR_SEED</spirit:name>
-      <spirit:displayName>Error Seed</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.ERROR_SEED">0</spirit:value>
+      <spirit:displayName>Random Seed for Error Injection</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.ERROR_SEED" spirit:choiceRef="choice_list_cb3853fd">0</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>CABLE_LENGTH</spirit:name>
-      <spirit:displayName>Cable Length</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.CABLE_LENGTH">10</spirit:value>
+      <spirit:displayName>Max Cable Length</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.CABLE_LENGTH" spirit:minimum="0" spirit:maximum="1000" spirit:rangeType="long">10</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>USER_WIDTH</spirit:name>
       <spirit:displayName>User Data Width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.USER_WIDTH">256</spirit:value>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.USER_WIDTH" spirit:choiceRef="choice_list_f4b6a108">256</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>FRAME_WIDTH</spirit:name>
-      <spirit:displayName>Frame Width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.FRAME_WIDTH">256</spirit:value>
-    </spirit:parameter>
-    <spirit:parameter>
-      <spirit:name>CRC_WIDTH</spirit:name>
-      <spirit:displayName>Crc Width</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.CRC_WIDTH">12</spirit:value>
-    </spirit:parameter>
-    <spirit:parameter>
-      <spirit:name>CRC_POLY</spirit:name>
-      <spirit:displayName>Crc Poly</spirit:displayName>
-      <spirit:value spirit:format="bitString" spirit:resolve="user" spirit:id="PARAM_VALUE.CRC_POLY" spirit:bitStringLength="12">0x02F</spirit:value>
-    </spirit:parameter>
-    <spirit:parameter>
-      <spirit:name>SCRAMBLER_N1</spirit:name>
-      <spirit:displayName>Scrambler N1</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.SCRAMBLER_N1">13</spirit:value>
-    </spirit:parameter>
-    <spirit:parameter>
-      <spirit:name>SCRAMBLER_N2</spirit:name>
-      <spirit:displayName>Scrambler N2</spirit:displayName>
-      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.SCRAMBLER_N2">33</spirit:value>
+      <spirit:displayName>RIFL Frame Size</spirit:displayName>
+      <spirit:value spirit:format="long" spirit:resolve="user" spirit:id="PARAM_VALUE.FRAME_WIDTH" spirit:choiceRef="choice_list_83ef8dc4">256</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>Component_Name</spirit:name>
-      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.Component_Name" spirit:order="1">rifl_v1_0</spirit:value>
+      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.Component_Name" spirit:order="1">RIFL_v1_0</spirit:value>
     </spirit:parameter>
     <spirit:parameter>
       <spirit:name>GT_TYPE</spirit:name>
       <spirit:displayName>GT Type</spirit:displayName>
-      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.GT_TYPE" spirit:choiceRef="choice_list_caf711fa">GTY</spirit:value>
+      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.GT_TYPE" spirit:choiceRef="choice_list_07672d9c">GTY</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>CHANNELS</spirit:name>
+      <spirit:displayName>GT Locations</spirit:displayName>
+      <spirit:value spirit:resolve="user" spirit:id="PARAM_VALUE.CHANNELS" spirit:choiceRef="choice_list_4ac14356">X0Y0</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>GT_REF_FREQ</spirit:name>
+      <spirit:displayName>GT Ref Clock Frequency (MHz)</spirit:displayName>
+      <spirit:value spirit:format="float" spirit:resolve="user" spirit:id="PARAM_VALUE.GT_REF_FREQ" spirit:minimum="1.0" spirit:maximum="800.0">100</spirit:value>
+    </spirit:parameter>
+    <spirit:parameter>
+      <spirit:name>INIT_FREQ</spirit:name>
+      <spirit:displayName>Init Clock Frequency (MHz)</spirit:displayName>
+      <spirit:value spirit:format="float" spirit:resolve="user" spirit:id="PARAM_VALUE.INIT_FREQ" spirit:minimum="1.0" spirit:maximum="250.0">100</spirit:value>
     </spirit:parameter>
   </spirit:parameters>
   <spirit:vendorExtensions>
     <xilinx:coreExtensions>
       <xilinx:supportedFamilies>
-        <xilinx:family xilinx:lifeCycle="Production">virtex7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">qvirtex7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">kintex7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">kintex7l</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">qkintex7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">qkintex7l</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">akintex7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">artix7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">artix7l</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">aartix7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">qartix7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">zynq</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">qzynq</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">azynq</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">spartan7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">aspartan7</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">virtexu</xilinx:family>
         <xilinx:family xilinx:lifeCycle="Production">zynquplus</xilinx:family>
         <xilinx:family xilinx:lifeCycle="Production">virtexuplus</xilinx:family>
         <xilinx:family xilinx:lifeCycle="Production">virtexuplusHBM</xilinx:family>
         <xilinx:family xilinx:lifeCycle="Production">virtexuplus58g</xilinx:family>
         <xilinx:family xilinx:lifeCycle="Production">kintexuplus</xilinx:family>
-        <xilinx:family xilinx:lifeCycle="Production">kintexu</xilinx:family>
       </xilinx:supportedFamilies>
       <xilinx:taxonomies>
         <xilinx:taxonomy>/UserIP</xilinx:taxonomy>
@@ -1720,15 +1721,15 @@
       <xilinx:definitionSource>package_project</xilinx:definitionSource>
       <xilinx:vendorDisplayName>clarkshen.com</xilinx:vendorDisplayName>
       <xilinx:coreRevision>2</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2021-04-06T02:15:07Z</xilinx:coreCreationDateTime>
+      <xilinx:coreCreationDateTime>2021-04-28T20:37:47Z</xilinx:coreCreationDateTime>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2020.1</xilinx:xilinxVersion>
       <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="04a0fc8d"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="81e9c9e5"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="86f31e7f"/>
       <xilinx:checksum xilinx:scope="ports" xilinx:value="e52a8f8a"/>
-      <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="b614b0e3"/>
-      <xilinx:checksum xilinx:scope="parameters" xilinx:value="27fee297"/>
+      <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="c73dddb8"/>
+      <xilinx:checksum xilinx:scope="parameters" xilinx:value="515d958e"/>
     </xilinx:packagingInfo>
   </spirit:vendorExtensions>
 </spirit:component>

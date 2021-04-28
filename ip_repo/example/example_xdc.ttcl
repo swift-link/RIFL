@@ -1,0 +1,45 @@
+#MIT License
+#
+#Author: Qianfeng (Clark) Shen;Contact: qianfeng.shen@gmail.com
+#
+#Copyright (c) 2021 swift-link
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+<: ;#fix header :>
+<: set ComponentName [getComponentNameString] :>
+<: setFileName "example" :>
+<: setFileExtension ".xdc" :>
+<: setOutputDirectory "./" :>
+<: set gt_type [get_property PARAM_VALUE.GT_TYPE] :>
+<: set n_channel [get_property PARAM_VALUE.N_CHANNEL] :>
+<: set channels [get_property PARAM_VALUE.CHANNELS] :>
+<: set gt_channel_name "GTHE4_CHANNEL" :>
+<: if {$gt_type == "GTY"} { :>
+<:     set gt_channel_name "GTYE4_CHANNEL" :>
+<: } :>
+<: set start_channel [lindex [split $channels ~] 0] :>
+<: set offset 0 :>
+<: if {$n_channel > 1} { :>
+<:     set offset [expr int($n_channel/2-1)] :>
+<: } :>
+<: set master_channel_header "[lindex [split $start_channel Y] 0]Y" :>
+<: set master_channel_idx [expr [lindex [split $start_channel Y] 1]+$offset] :>
+<: set master_channel "${master_channel_header}${master_channel_idx}" :>
+<: set GT_REF_FREQ [get_property PARAM_VALUE.GT_REF_FREQ] :>
+<: set GT_REF_PERIOD [format %.3f [expr 1000.0/$GT_REF_FREQ]] :>
+<: set INIT_FREQ [get_property PARAM_VALUE.INIT_FREQ] :>
+<: set INIT_PERIOD [format %.3f [expr 1000.0/$INIT_FREQ]] :>
+create_clock -period <=: $GT_REF_PERIOD :> [get_ports gt_ref_clk_p]
+set_property LOC [get_package_pins -of_objects [get_bels [get_sites -filter {NAME =~ *COMMON*} -of_objects [get_iobanks -of_objects [get_sites <=: ${gt_channel_name}_${master_channel} :>]]]/REFCLK0P]] [get_ports gt_ref_clk_p]
+set_property LOC [get_package_pins -of_objects [get_bels [get_sites -filter {NAME =~ *COMMON*} -of_objects [get_iobanks -of_objects [get_sites <=: ${gt_channel_name}_${master_channel} :>]]]/REFCLK0N]] [get_ports gt_ref_clk_n]
+create_clock -period <=: $INIT_PERIOD :> [get_ports init_clk_p]
+###change below constraints to what reflects your board's wiring
+#set_property IOSTANDARD LVDS_25 [get_ports {init_clk_p[0]}]
+#set_property IOSTANDARD LVDS_25 [get_ports {init_clk_n[0]}]
+#set_property PACKAGE_PIN C4 [get_ports {init_clk_p[0]}]
+#set_property PACKAGE_PIN C3 [get_ports {init_clk_n[0]}]

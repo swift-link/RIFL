@@ -1,17 +1,29 @@
+#MIT License
+#
+#Author: Qianfeng (Clark) Shen;Contact: qianfeng.shen@gmail.com
+#
+#Copyright (c) 2021 swift-link
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
 <: ;#fix header :>
 <: setFileProcessingOrder late :>
-<: setFileUsedIn {out_of_context,synthesis,implementation} :>
+<: setFileUsedIn {synthesis implementation} :>
 <: setOutputDirectory "./xdc" :>
 <: setFileName [getComponentNameString] :>
 <: setFileExtension ".xdc" :>
-<: set GT_WIDTH [getIntValue "GT_WIDTH"] :>
-<: set FRAME_WIDTH [getIntValue "FRAME_WIDTH"] :>
+<: set GT_WIDTH [get_property PARAM_VALUE.GT_WIDTH] :>
+<: set FRAME_WIDTH [get_property PARAM_VALUE.FRAME_WIDTH] :>
 <: set FRAME_CLK_RATIO [expr $FRAME_WIDTH/$GT_WIDTH] :>
-<: set USER_WIDTH [getIntValue "USER_WIDTH"] :>
-<: set N_CHANNEL [getIntValue "N_CHANNEL"] :>
+<: set USER_WIDTH [get_property PARAM_VALUE.USER_WIDTH] :>
+<: set N_CHANNEL [get_property PARAM_VALUE.N_CHANNEL] :>
 <: set USER_CLK_RATIO [expr $FRAME_WIDTH*$N_CHANNEL/$USER_WIDTH] :>
 <: set USER_GT_CLK_RATIO [expr $USER_WIDTH/$N_CHANNEL/$GT_WIDTH] :>
-<: set ERROR_INJ [getIntValue "ERROR_INJ"] :>
+<: set ERROR_INJ [get_property PARAM_VALUE.ERROR_INJ] :>
 set init_clk_src [get_ports init_clk]
 set tx_frame_clk_src [get_pins -hier -filter {NAME =~ */u_tx_clock_buffer/bufg_inst3/O}]
 set tx_frame_clk [get_clocks -quiet -of $tx_frame_clk_src]
