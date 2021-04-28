@@ -1,3 +1,14 @@
+//MIT License
+//
+//Author: Qianfeng (Clark) Shen
+//Copyright (c) 2021 swift-link
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 proc create_sim_bd {rifl_config project_dir project_name} {
     set bd_name "rifl_ex_sim"
     create_bd_design ${bd_name}
@@ -6,6 +17,7 @@ proc create_sim_bd {rifl_config project_dir project_name} {
     set traffic_dwidth [dict get ${rifl_config} CONFIG.USER_WIDTH]
     set n_channel [dict get ${rifl_config} CONFIG.N_CHANNEL]
     set gt_ref_freq [expr int([dic get ${rifl_config} CONFIG.GT_REF_FREQ]*10**6)]
+    set init_freq [expr int([dic get ${rifl_config} CONFIG.INIT_FREQ]*10**6)]
 
     dict set rifl_config CONFIG.ERROR_INJ 1
 
@@ -73,7 +85,7 @@ proc create_sim_bd {rifl_config project_dir project_name} {
     make_bd_intf_pins_external [get_bd_intf_pins easyobv_axis_mon_0/dbg] -name dbg
 
     set_property CONFIG.FREQ_HZ $gt_ref_freq [get_bd_intf_ports gt_ref]
-    set_property CONFIG.FREQ_HZ 100000000 [get_bd_ports /init_clk]
+    set_property CONFIG.FREQ_HZ $init_freq [get_bd_ports /init_clk]
 
     connect_bd_net [get_bd_pins RIFL_0/usr_clk] \
                     [get_bd_pins easyobv_axis_randgen_0/clk] \

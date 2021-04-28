@@ -1,21 +1,35 @@
+//MIT License
+//
+//Author: Qianfeng (Clark) Shen
+//Copyright (c) 2021 swift-link
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 <: ;#fix header :>
 <: set ComponentName [getComponentNameString] :>
 <: setFileName [ttcl_string_concat [getComponentNameString] "_tb"] :>
 <: setFileExtension ".sv" :>
 <: setOutputDirectory "./" :>
-<: set N_CHANNEL [getIntValue "N_CHANNEL"] :>
-<: set GT_REF_FREQ [getIntValue "GT_REF_FREQ"] :>
+<: set N_CHANNEL [get_property PARAM_VALUE.N_CHANNEL] :>
+<: set GT_REF_FREQ [get_property PARAM_VALUE.GT_REF_FREQ] :>
 <: set GT_REF_PERIOD [format %.3f [expr 1000.0/$GT_REF_FREQ]] :>
-<: set LANE_LINE_RATE [getStringValue "LANE_LINE_RATE"] :>
-<: set USER_WIDTH [getIntValue "USER_WIDTH"] :>
+<: set INIT_FREQ [get_property PARAM_VALUE.INIT_FREQ] :>
+<: set INIT_PERIOD [format %.3f [expr 1000.0/$INIT_FREQ]] :>
+<: set LANE_LINE_RATE [get_property PARAM_VALUE.LANE_LINE_RATE] :>
+<: set USER_WIDTH [get_property PARAM_VALUE.USER_WIDTH] :>
 <: set USR_PERIOD [format %.3f [expr ($USER_WIDTH*1.0)/($N_CHANNEL*$LANE_LINE_RATE)]] :>
-<: set FRAME_WIDTH [getIntValue "FRAME_WIDTH"] :>
-<: set CRC_WIDTH [getIntValue "CRC_WIDTH"] :>
+<: set FRAME_WIDTH [get_property PARAM_VALUE.FRAME_WIDTH] :>
+<: set CRC_WIDTH 12 :>
 <: set PKT_SIZE_UNIT [expr int(($FRAME_WIDTH-4-$CRC_WIDTH)/8*($USER_WIDTH/$FRAME_WIDTH))] :>
 `timescale 1ps/1ps
 module tb();
     localparam int N_CHANNEL = <=: $N_CHANNEL :>;
     localparam realtime GT_REF_PERIOD = <=: $GT_REF_PERIOD :>ns;
+    localparam realtime INIT_PERIOD = <=: $INIT_PERIOD :>ns;
     localparam bit [31:0] N_PKT = 1000;
     localparam real USR_PERIOD = <=: $USR_PERIOD :>;
     localparam int PKT_SIZE_UNIT = <=: $PKT_SIZE_UNIT :>;

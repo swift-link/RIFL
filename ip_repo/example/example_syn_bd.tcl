@@ -1,3 +1,14 @@
+//MIT License
+//
+//Author: Qianfeng (Clark) Shen
+//Copyright (c) 2021 swift-link
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 proc create_syn_bd {rifl_config project_dir project_name} {
     set bd_name "rifl_ex_syn"
     create_bd_design ${bd_name}
@@ -7,14 +18,15 @@ proc create_syn_bd {rifl_config project_dir project_name} {
     set n_channel [dict get ${rifl_config} CONFIG.N_CHANNEL]
     set err_inj [dic get ${rifl_config} CONFIG.ERROR_INJ]
     set gt_ref_freq [expr int([dic get ${rifl_config} CONFIG.GT_REF_FREQ]*10**6)]
-    
+    set init_freq [expr int([dic get ${rifl_config} CONFIG.INIT_FREQ]*10**6)]
+
     # external ports
     set gt_ref [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 gt_ref ]
     set init [ create_bd_intf_port -mode Slave -vlnv xilinx.com:interface:diff_clock_rtl:1.0 init ]
     set rifl_gt [ create_bd_intf_port -mode Master -vlnv clarkshen.com:user:rifl_gt_rtl:1.0 rifl_gt ]
     
     set_property CONFIG.FREQ_HZ $gt_ref_freq [get_bd_intf_ports /gt_ref]
-    set_property CONFIG.FREQ_HZ 100000000 [get_bd_intf_ports /init]
+    set_property CONFIG.FREQ_HZ $init_freq [get_bd_intf_ports /init]
     
     # init clock
     set util_ds_buf_0 [ addip util_ds_buf util_ds_buf_0 ]

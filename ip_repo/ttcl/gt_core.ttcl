@@ -1,9 +1,22 @@
+//MIT License
+//
+//Author: Qianfeng (Clark) Shen
+//Copyright (c) 2021 swift-link
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 <: ;#fix header :>
 <: setOutputDirectory "./rtl/rifl/gt_wrapper" :>
 <: setFileName "rifl_gt_wrapper" :>
 <: setFileExtension ".sv" :>
-<: set MASTER_CHANNEL [getStringValue MASTER_CHAN] :>
-<: set gt_module_name "gt_core_${MASTER_CHANNEL}" :>
+<: set gt_type [get_property PARAM_VALUE.GT_TYPE] :>
+<: set channels [get_property PARAM_VALUE.CHANNELS] :>
+<: set start_channel [lindex [split $channels ~] 0] :>
+<: set gt_module_name "gt_core_${start_channel}" :>
 `timescale 1ns / 1ps
 module rifl_gt_wrapper # (
     parameter int N_CHANNEL = 1,
@@ -101,10 +114,17 @@ module rifl_gt_wrapper # (
 
 //gt_core
     <=: $gt_module_name :> rifl_gt_core_inst (
+<: if {$gt_type == "GTH"} { :>
+        .gthrxn_in                               (gt_rxn_in),
+        .gthrxp_in                               (gt_rxp_in),
+        .gthtxn_out                              (gt_txn_out),
+        .gthtxp_out                              (gt_txp_out),
+<: } elseif {$gt_type == "GTY"} { :>
         .gtyrxn_in                               (gt_rxn_in),
         .gtyrxp_in                               (gt_rxp_in),
         .gtytxn_out                              (gt_txn_out),
         .gtytxp_out                              (gt_txp_out),
+<: } :>
         .gtwiz_buffbypass_tx_reset_in            (bypass_tx_reset_gt),
         .gtwiz_buffbypass_tx_start_user_in       (1'b0),
         .gtwiz_buffbypass_tx_done_out            (bypass_tx_done_gt),

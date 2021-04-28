@@ -1,3 +1,14 @@
+//MIT License
+//
+//Author: Qianfeng (Clark) Shen
+//Copyright (c) 2021 swift-link
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 module tx_axis_conv #(
     parameter int DWIDTH_IN = 256,
     parameter int DWIDTH_OUT = 240
@@ -102,36 +113,6 @@ module tx_axis_conv #(
     assign data_vector = {data_tail_reg,s_axis_tdata[DWIDTH_IN-1:DWIDTH_UNIT]};
     assign keep_vector = {keep_tail_reg,({DWIDTH_OUT/8{~tail_eop}}&s_axis_tkeep[DWIDTH_IN/8-1:KEEP_UNIT])};
 
-/*
-    function [7:0] BYTE_CNT_SUM;
-        input [DWIDTH_OUT/8-1:0] tkeep;
-        BYTE_CNT_SUM = 8'b0;
-        for (int i = 0; i < DWIDTH_OUT/8; i++)
-            BYTE_CNT_SUM = BYTE_CNT_SUM + tkeep[i];
-    endfunction
-
-    always_ff @(posedge clk) begin
-        if (rst) begin
-            for (int i = 0; i < N_CHANNEL; i++) begin
-                tx_axis_tdata[i] <= {DWIDTH_OUT/N_CHANNEL{1'b0}};
-                tx_axis_tlast[i] <= 1'b0;
-                tx_axis_tvalid[i] <= 1'b0;
-                tx_byte_cnt[i] <= 8'b0;
-            end
-        end
-        else if (m_axis_tready) begin
-            for (int i = 0; i < N_CHANNEL; i++) begin
-                tx_axis_tdata[i] <= m_axis_tdata[(i+1)*DWIDTH_OUT_CHANNEL-1-:DWIDTH_OUT_CHANNEL];
-                tx_byte_cnt[i] <= BYTE_CNT_SUM(m_axis_tkeep[(i+1)*DWIDTH_OUT_CHANNEL/8-1-:DWIDTH_OUT_CHANNEL/8]);
-                if (i != 0)
-                    tx_axis_tlast[i] <= m_axis_tvalid & int_tlast & int_tkeep[(i+1)*DWIDTH_OUT_CHANNEL/8-1] & ~int_tkeep[i*DWIDTH_OUT_CHANNEL/8-1];
-                else
-                    tx_axis_tlast[i] <= m_axis_tvalid & int_tlast & int_tkeep[DWIDTH_OUT_CHANNEL/8-1];
-                tx_axis_tvalid[i] = m_axis_tvalid & int_tkeep[(i+1)*DWIDTH_OUT_CHANNEL/8-1];
-            end
-        end
-    end
-*/
     assign m_axis_tdata = data_vector[DWIDTH_OUT-1+DWIDTH_UNIT*cnt-:DWIDTH_OUT];
     assign m_axis_tkeep = keep_vector[DWIDTH_OUT/8-1+KEEP_UNIT*cnt-:DWIDTH_OUT/8];
     assign m_axis_tlast = (tail_eop || (s_axis_tlast && ~s_axis_tkeep[KEEP_UNIT*(cnt+1)-1])) && (s_axis_tvalid | core_pause);

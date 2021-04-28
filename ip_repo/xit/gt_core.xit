@@ -1,16 +1,54 @@
+#MIT License
+#
+#Author: Qianfeng (Clark) Shen
+#Copyright (c) 2021 swift-link
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
 namespace eval rifl {
-#    set ComponentName [get_property CONFIG.Component_Name] [::ipxit::current_inst]]
-    #set gt_module_name "${ComponentName}_gt_core"
-#    set sub_core_vlnv xilinx.com:ip:gtwizard_ultrascale:1.7
-    #set sub_core [create_sub_core $sub_core_vlnv $gt_module_name]
-#    set sub_core [create_sub_core $sub_core_vlnv gt_core]
-
     set linerate [get_property CONFIG.LANE_LINE_RATE [::ipxit::current_inst]]
     set ref_freq [get_property CONFIG.GT_REF_FREQ [::ipxit::current_inst]]
+    set init_freq [get_property CONFIG.INIT_FREQ [::ipxit::current_inst]]
     set gt_type [get_property CONFIG.GT_TYPE [::ipxit::current_inst]]
-    set master_channel [get_property CONFIG.MASTER_CHAN [::ipxit::current_inst]]
+    set start_channel [lindex [split [get_property CONFIG.CHANNELS [::ipxit::current_inst]] ~] 0]
     set n_channel [get_property CONFIG.N_CHANNEL [::ipxit::current_inst]]
-    set gt_bus_width [get_property CONFIG.GT_WIDTH [::ipxit::current_inst]]
+    #build gt properties
+    set channels ""
+    set header "[lindex [split $start_channel Y] 0]Y"
+    set start_idx [lindex [split $start_channel Y] 1]
+    for {set i 0} {$i < $n_channel} {incr i} {
+        set curr_idx [expr int($i+$start_idx)]
+        set curr_channel "${header}${curr_idx}"
+        lappend channels $curr_channel
+    }
+    if {$n_channel == 1} {
+        set master_channel $start_channel
+    } else {
+        set master_channel [lindex $channels [expr int($n_channel/2-1)]]
+    }
+    if {$gt_type != "GTM"} {
+        set sub_core_vlnv xilinx.com:ip:gtwizard_ultrascale:1.7
+    } else {
+        #place holder for GTM
+        return
+    }
+    set gt_module_name "gt_core_${start_channel}"
+
+    set gt_bus_width 64
+    if {$gt_type == "GTM"} {
+        set gt_bus_width 128
+    }
+
+    set gt_int_bus_width 32
+    if {$gt_type == "GTY"} {
+        set gt_int_bus_width 64
+    } elseif {$gt_type == "GTM"} {
+        set gt_int_bus_width 128
+    }    
 
     set rate_ratio 1.0
     if {$linerate > 16.375} {
@@ -21,19 +59,35 @@ namespace eval rifl {
     set major [expr floor($whole)]
     set minor [expr $whole - $major]
     set fraqcn [expr int($minor*2**24)]
+    set real_ref_freq [expr [format "%.7f" [expr $linerate*1000.0/((double($fraqcn)/2**24+$major)*$rate_ratio)]] + 0.0]
+    if {$real_ref_freq == [expr double(int($real_ref_freq))]} {
+        set real_ref_freq [expr int($real_ref_freq)]
+    }
 
-    if {$master_channel != "UNDEFINED"} {
-        set sub_core_vlnv xilinx.com:ip:gtwizard_ultrascale:1.7
-        set gt_module_name "gt_core_${master_channel}"
-        set sub_core [create_sub_core $sub_core_vlnv $gt_module_name]
-
-        set channels ""
-        for {set i 0} {$i < $n_channel} {incr i} {
-            set header [regsub (X.*Y).* $master_channel \\1]
-            set curr_idx [expr $i+[regsub "X.*Y" $master_channel ""]]
-            set curr_channel "${header}${curr_idx}"
-            lappend channels $curr_channel
-        }
-        set_property -dict [list CONFIG.GT_TYPE "$gt_type" CONFIG.CHANNEL_ENABLE "$channels" CONFIG.TX_MASTER_CHANNEL "$master_channel" CONFIG.RX_MASTER_CHANNEL "$master_channel" CONFIG.TX_LINE_RATE "$linerate" CONFIG.TX_REFCLK_FREQUENCY "$ref_freq" CONFIG.TX_QPLL_FRACN_NUMERATOR "$fraqcn" CONFIG.TX_USER_DATA_WIDTH "$gt_bus_width" CONFIG.TX_INT_DATA_WIDTH "$gt_bus_width" CONFIG.TX_BUFFER_MODE {0} CONFIG.TX_OUTCLK_SOURCE {TXPROGDIVCLK} CONFIG.RX_LINE_RATE "$linerate" CONFIG.RX_REFCLK_FREQUENCY "$ref_freq" CONFIG.RX_USER_DATA_WIDTH "$gt_bus_width" CONFIG.RX_INT_DATA_WIDTH "$gt_bus_width" CONFIG.RX_BUFFER_MODE {0} CONFIG.RX_QPLL_FRACN_NUMERATOR "$fraqcn" CONFIG.ENABLE_OPTIONAL_PORTS {loopback_in} CONFIG.FREERUN_FREQUENCY {100} CONFIG.RX_EQ_MODE {AUTO}] $sub_core
+    set sub_core [create_sub_core $sub_core_vlnv $gt_module_name]
+    if {$gt_type != "GTM"} {
+        set_property -dict [list \
+            CONFIG.GT_TYPE "$gt_type" \
+            CONFIG.CHANNEL_ENABLE "$channels" \
+            CONFIG.TX_MASTER_CHANNEL "$master_channel" \
+            CONFIG.RX_MASTER_CHANNEL "$master_channel" \
+            CONFIG.TX_LINE_RATE "$linerate" \
+            CONFIG.TX_REFCLK_FREQUENCY "$real_ref_freq" \
+            CONFIG.TX_QPLL_FRACN_NUMERATOR "$fraqcn" \
+            CONFIG.TX_USER_DATA_WIDTH "$gt_bus_width" \
+            CONFIG.TX_INT_DATA_WIDTH "$gt_int_bus_width" \
+            CONFIG.TX_BUFFER_MODE {0} \
+            CONFIG.TX_OUTCLK_SOURCE {TXPROGDIVCLK} \
+            CONFIG.RX_LINE_RATE "$linerate" \
+            CONFIG.RX_REFCLK_FREQUENCY "$real_ref_freq" \
+            CONFIG.RX_USER_DATA_WIDTH "$gt_bus_width" \
+            CONFIG.RX_INT_DATA_WIDTH "$gt_int_bus_width" \
+            CONFIG.RX_BUFFER_MODE {0} \
+            CONFIG.RX_QPLL_FRACN_NUMERATOR "$fraqcn" \
+            CONFIG.ENABLE_OPTIONAL_PORTS {loopback_in} \
+            CONFIG.FREERUN_FREQUENCY "$init_freq" \
+            CONFIG.RX_EQ_MODE {AUTO}] $sub_core
+    } else {
+        return
     }
 }

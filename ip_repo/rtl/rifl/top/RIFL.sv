@@ -1,23 +1,29 @@
+//MIT License
+//
+//Author: Qianfeng (Clark) Shen
+//Copyright (c) 2021 swift-link
+//
+//Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+//
+//The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+//
+//THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//
 `timescale 1ns / 1ps
-module rifl #
+module RIFL #
 (
 //gt
     parameter int N_CHANNEL = 1,
-    parameter real LANE_LINE_RATE = 28,
-    parameter real GT_REF_FREQ = 100.0,
-    parameter MASTER_CHAN = "UNDEFINED",
     parameter int GT_WIDTH = 64,
+    parameter int GT_INT_WIDTH = 64,
+    parameter real LANE_LINE_RATE = 28,
 //rifl
     //error injection
     parameter bit ERROR_INJ = 1'b0,
     parameter bit [63:0] ERROR_SEED = 64'b0,
     parameter int CABLE_LENGTH = 10,
     parameter int USER_WIDTH = 256,
-    parameter int FRAME_WIDTH = 256,
-    parameter int CRC_WIDTH = 12,
-    parameter int CRC_POLY = 12'h02f,
-    parameter int SCRAMBLER_N1 = 13,
-    parameter int SCRAMBLER_N2 = 33
+    parameter int FRAME_WIDTH = 256
 )
 (
 //clk and rst
@@ -66,17 +72,24 @@ module rifl #
     output logic [N_CHANNEL-1:0] remote_fc,
     output logic compensate
 );
+    localparam int CRC_WIDTH = 12;
+    localparam int CRC_POLY = 12'h02f;
+    localparam int SCRAMBLER_N1 = 13;
+    localparam int SCRAMBLER_N2 = 33;
+
     localparam int N_BOUNDING_GRP = FRAME_WIDTH*N_CHANNEL/USER_WIDTH;
     localparam int PAYLOAD_WIDTH = FRAME_WIDTH-4-CRC_WIDTH;
     localparam int CHANNEL_PER_GRP = N_CHANNEL/N_BOUNDING_GRP;
     localparam int SPATIAL_CB_WIDTH = PAYLOAD_WIDTH*CHANNEL_PER_GRP;
 
-    localparam int FRAME_RATIO = FRAME_WIDTH/GT_WIDTH;
-    localparam int FRAME_CNT_WIDTH = FRAME_RATIO == 1 ? 1 : $clog2(FRAME_RATIO);
+    localparam int GT_RATIO = GT_WIDTH/GT_INT_WIDTH;
+    localparam int FRAME_RATIO = FRAME_WIDTH/GT_INT_WIDTH;
+    localparam int FRAME_CNT_WIDTH = FRAME_WIDTH == GT_WIDTH ? 1 : $clog2(FRAME_WIDTH/GT_WIDTH);
     localparam int USER2FRAME_RATIO = N_BOUNDING_GRP;
     localparam int USER_CNT_WIDTH = USER2FRAME_RATIO == 1 ? 1 : $clog2(USER2FRAME_RATIO);
-    localparam int GT2USER_RATIO = USER_WIDTH/N_CHANNEL/GT_WIDTH;
+    localparam int GT2USER_RATIO = USER_WIDTH/N_CHANNEL/GT_INT_WIDTH;
     localparam bit [2:0] GT2USER_DIV_CODE = GT2USER_RATIO-1;
+//calculate cable length related parameters
     localparam int FRAME_FREQ = int'(LANE_LINE_RATE*10**3/FRAME_WIDTH);
     //set GT latency to 80 ns (normally lower than this)
     localparam real GT_LATENCY = 80.0;
@@ -88,6 +101,7 @@ module rifl #
     //the retrans buffer need to preserve all frames started from N-16 instead of N
     localparam int ROLLBACK_DELAY = 16;
     localparam int FRAME_ID_WIDTH = $clog2(RX_DELAY+ROLLBACK_DELAY+int'(RTT*LANE_LINE_RATE/real'(FRAME_WIDTH)));
+    localparam bit [63:0] SIZE_UNIT = CHANNEL_PER_GRP*PAYLOAD_WIDTH/8;
 
 //clks
     logic tx_frame_clk;
@@ -234,7 +248,8 @@ module rifl #
     );
     
     clock_buffer #(
-        .RATIO     (FRAME_RATIO)
+        .GT_RATIO      (GT_RATIO),
+        .FRAME_RATIO   (FRAME_RATIO)
     ) u_tx_clock_buffer(
         .src_clk       (tx_gt_src_clk[0]),
         .rst           (tx_gt_clk_rst),
@@ -244,7 +259,8 @@ module rifl #
         .usrclk_active (tx_usr_clk_active)
     );
     clock_buffer #(
-        .RATIO     (FRAME_RATIO)
+        .GT_RATIO      (GT_RATIO),
+        .FRAME_RATIO   (FRAME_RATIO)
     ) u_rx_clock_buffer(
         .src_clk       (rx_gt_src_clk[0]),
         .rst           (rx_gt_clk_rst),
@@ -279,7 +295,7 @@ module rifl #
 
     if (FRAME_RATIO != 1) begin
         clock_counter #(
-            .RATIO (FRAME_RATIO)
+            .RATIO (FRAME_WIDTH/GT_WIDTH)
         ) frame_clock_counter(
             .clk_slow (tx_frame_clk),
             .clk_fast (tx_gt_clk),
