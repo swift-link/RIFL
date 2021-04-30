@@ -102,7 +102,6 @@ module RIFL #
     //the retrans buffer need to preserve all frames started from N-16 instead of N
     localparam int ROLLBACK_DELAY = 16;
     localparam int FRAME_ID_WIDTH = $clog2(RX_DELAY+ROLLBACK_DELAY+int'(RTT*LANE_LINE_RATE/real'(FRAME_WIDTH)));
-    localparam bit [63:0] SIZE_UNIT = CHANNEL_PER_GRP*PAYLOAD_WIDTH/8;
 
 //clks
     logic tx_frame_clk;
@@ -115,10 +114,10 @@ module RIFL #
     logic gt_init_rst;
 
 //gt
-    logic [N_CHANNEL-1:0] tx_gt_src_clk;
-    logic [N_CHANNEL-1:0] rx_gt_src_clk;
-    logic tx_usr_clk;
-    logic rx_usr_clk;
+    logic tx_gt_src_clk;
+    logic rx_gt_src_clk;
+    logic txusrclk;
+    logic rxusrclk;
     logic tx_usr_clk_active, rx_usr_clk_active;
     logic tx_gt_clk_rst, rx_gt_clk_rst;
     logic [GT_WIDTH-1:0] gt_tx_data[N_CHANNEL-1:0];
@@ -228,7 +227,7 @@ module RIFL #
         .init_clk          (init_clk),
         .rst               (rst),
         .gt_init_rst       (gt_init_rst),
-        .rx_aligned        (rx_aligned_rx),
+        .rx_aligned        (&rx_aligned_rx),
         .gt_rxp_in         (gt_rxp_in),
         .gt_rxn_in         (gt_rxn_in),
         .gt_loopback_in    (gt_loopback_in),
@@ -238,10 +237,10 @@ module RIFL #
         .gt_txn_out        (gt_txn_out),
         .tx_gt_src_clk     (tx_gt_src_clk),
         .rx_gt_src_clk     (rx_gt_src_clk),
-        .tx_usr_clk        ({N_CHANNEL{tx_usr_clk}}),
-        .rx_usr_clk        ({N_CHANNEL{rx_usr_clk}}),
-        .tx_gt_clk         ({N_CHANNEL{tx_gt_clk}}),
-        .rx_gt_clk         ({N_CHANNEL{rx_gt_clk}}),
+        .txusrclk          (txusrclk),
+        .rxusrclk          (rxusrclk),
+        .txusrclk2         (tx_gt_clk),
+        .rxusrclk2         (rx_gt_clk),
         .tx_usr_clk_active (tx_usr_clk_active),
         .rx_usr_clk_active (rx_usr_clk_active),
         .tx_gt_clk_rst     (tx_gt_clk_rst),
@@ -252,9 +251,9 @@ module RIFL #
         .GT_RATIO      (GT_RATIO),
         .FRAME_RATIO   (FRAME_RATIO)
     ) u_tx_clock_buffer(
-        .src_clk       (tx_gt_src_clk[0]),
+        .src_clk       (tx_gt_src_clk),
         .rst           (tx_gt_clk_rst),
-        .usrclk        (tx_usr_clk),
+        .usrclk        (txusrclk),
         .usrclk2       (tx_gt_clk),
         .usrclk3       (tx_frame_clk),
         .usrclk_active (tx_usr_clk_active)
@@ -263,9 +262,9 @@ module RIFL #
         .GT_RATIO      (GT_RATIO),
         .FRAME_RATIO   (FRAME_RATIO)
     ) u_rx_clock_buffer(
-        .src_clk       (rx_gt_src_clk[0]),
+        .src_clk       (rx_gt_src_clk),
         .rst           (rx_gt_clk_rst),
-        .usrclk        (rx_usr_clk),
+        .usrclk        (rxusrclk),
         .usrclk2       (rx_gt_clk),
         .usrclk3       (rx_frame_clk),
         .usrclk_active (rx_usr_clk_active)
@@ -278,7 +277,7 @@ module RIFL #
             .CLR(tx_gt_clk_rst),
             .CLRMASK(1'b0),
             .DIV(GT2USER_DIV_CODE),
-            .I(tx_gt_src_clk[0]),
+            .I(tx_gt_src_clk),
             .O(usr_clk)
         );
         clock_counter #(

@@ -31,7 +31,7 @@ module rifl_gt_wrapper # (
     input logic rst,
     input logic gt_init_rst,
 //align status
-    input logic [N_CHANNEL-1:0] rx_aligned,
+    input logic rx_aligned,
 //gt input pins
     input logic [N_CHANNEL-1:0] gt_rxp_in,
     input logic [N_CHANNEL-1:0] gt_rxn_in,
@@ -46,18 +46,27 @@ module rifl_gt_wrapper # (
     output logic [N_CHANNEL-1:0] gt_txn_out,
 //clock signals
     //clk
-    output logic [N_CHANNEL-1:0] tx_gt_src_clk,
-    output logic [N_CHANNEL-1:0] rx_gt_src_clk,
-    input logic [N_CHANNEL-1:0] tx_usr_clk,
-    input logic [N_CHANNEL-1:0] rx_usr_clk,
-    input logic [N_CHANNEL-1:0] tx_gt_clk,
-    input logic [N_CHANNEL-1:0] rx_gt_clk,
+    output logic tx_gt_src_clk,
+    output logic rx_gt_src_clk,
+    input logic txusrclk,
+    input logic rxusrclk,
+    input logic txusrclk2,
+    input logic rxusrclk2,
     //clk_cntrl
     input logic tx_usr_clk_active,
     input logic rx_usr_clk_active,
     output logic tx_gt_clk_rst,
     output logic rx_gt_clk_rst
 );
+//clks
+    localparam int MASTER_CHAN_IDX = N_CHANNEL == 1 ? 0 : N_CHANNEL/2-1;
+    logic [N_CHANNEL-1:0] tx_gt_src_clk_int;
+    logic [N_CHANNEL-1:0] rx_gt_src_clk_int;
+    logic [N_CHANNEL-1:0] txusrclk_int;
+    logic [N_CHANNEL-1:0] rxusrclk_int;
+    logic [N_CHANNEL-1:0] txusrclk2_int;
+    logic [N_CHANNEL-1:0] rxusrclk2_int;
+
 //rsts
     logic bypass_tx_reset_gt;
     logic bypass_rx_reset_gt;
@@ -76,17 +85,15 @@ module rifl_gt_wrapper # (
 
 //control and status
     logic tx_good_tx_synced;
-    logic [N_CHANNEL-1:0] rx_good_rx_synced;
+    logic rx_good_rx_synced;
     logic tx_good_init_synced;
-    logic [N_CHANNEL-1:0] rx_good_init_synced;
+    logic rx_good_init_synced;
 
 //synchronizer
-    gt_cdc # (
-        .N_CHANNEL (N_CHANNEL)
-    ) gt_cdc_inst (
+    gt_cdc gt_cdc_inst (
         .init_clk(init_clk),
-        .tx_gt_clk(tx_gt_clk[0]),
-        .rx_gt_clk(rx_gt_clk),
+        .txusrclk2(txusrclk2),
+        .rxusrclk2(rxusrclk2),
         .rst(rst),
         .tx_good_tx_synced(tx_good_tx_synced),
         .rx_good_rx_synced(rx_good_rx_synced),
@@ -109,7 +116,7 @@ module rifl_gt_wrapper # (
     ) rx_datapath_reset_inst (
         .clk(init_clk),
         .rst(gt_init_rst),
-        .channel_good(&rx_good_init_synced),
+        .channel_good(rx_good_init_synced),
         .rst_out(rst_rx_datapath_gt)
     );
 
@@ -144,13 +151,13 @@ module rifl_gt_wrapper # (
         .gtwiz_reset_tx_done_out                 (rst_tx_done_gt),
         .gtwiz_reset_rx_done_out                 (rst_rx_done_gt),
         .gtwiz_userclk_tx_active_in              (tx_usr_clk_active),
-        .txusrclk_in                             (tx_usr_clk),
-        .txusrclk2_in                            (tx_gt_clk),
-        .txoutclk_out                            (tx_gt_src_clk),
+        .txusrclk_in                             (txusrclk_int),
+        .txusrclk2_in                            (txusrclk2_int),
+        .txoutclk_out                            (tx_gt_src_clk_int),
         .gtwiz_userclk_rx_active_in              (rx_usr_clk_active),
-        .rxusrclk_in                             (rx_usr_clk),
-        .rxusrclk2_in                            (rx_gt_clk),
-        .rxoutclk_out                            (rx_gt_src_clk),
+        .rxusrclk_in                             (rxusrclk_int),
+        .rxusrclk2_in                            (rxusrclk2_int),
+        .rxoutclk_out                            (rx_gt_src_clk_int),
         .gtwiz_userdata_tx_in                    (gt_tx_data_int),
         .gtwiz_userdata_rx_out                   (gt_rx_data_int),
         .gtrefclk00_in                           (gt_ref_clk),
@@ -162,6 +169,13 @@ module rifl_gt_wrapper # (
         .txpmaresetdone_out                      (txpmaresetdone_out),
         .txprgdivresetdone_out                   (txprgdivresetdone_out)
     );
+//clks
+    assign tx_gt_src_clk = tx_gt_src_clk_int[MASTER_CHAN_IDX];
+    assign rx_gt_src_clk = rx_gt_src_clk_int[MASTER_CHAN_IDX];
+    assign txusrclk_int = {N_CHANNEL{txusrclk}};
+    assign rxusrclk_int = {N_CHANNEL{rxusrclk}};
+    assign txusrclk2_int = {N_CHANNEL{txusrclk2}};
+    assign rxusrclk2_int = {N_CHANNEL{rxusrclk2}};
 
 //data
     genvar i;
@@ -176,7 +190,6 @@ module rifl_gt_wrapper # (
     assign tx_gt_clk_rst = ~(&txpmaresetdone_out && &txprgdivresetdone_out);
     assign rx_gt_clk_rst = ~(&rxpmaresetdone_out);
     assign tx_good_tx_synced = rst_tx_done_gt & bypass_tx_done_gt;
-    for (i = 0; i < N_CHANNEL; i++)
-        assign rx_good_rx_synced[i] = rst_rx_done_gt & bypass_rx_done_gt & rx_aligned[i];
+    assign rx_good_rx_synced = rst_rx_done_gt & bypass_rx_done_gt & rx_aligned;
 
 endmodule

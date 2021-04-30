@@ -11,13 +11,11 @@
 #THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 <: ;#fix header :>
-<: setFileProcessingOrder early :>
-<: setFileUsedIn {out_of_context} :>
+<: setFileProcessingOrder late :>
+<: setFileUsedIn {synthesis} :>
 <: setOutputDirectory "./xdc" :>
-<: setFileName "[getComponentNameString]_ooc" :>
+<: setFileName "[getComponentNameString]_syn" :>
 <: setFileExtension ".xdc" :>
-<: set GT_REF_FREQ [get_property PARAM_VALUE.GT_REF_FREQ] :>
-<: set GT_PERIOD [format %.3f [expr 1000.0/$GT_REF_FREQ]] :>
 <: set GT_WIDTH [get_property PARAM_VALUE.GT_WIDTH] :>
 <: set FRAME_WIDTH [get_property PARAM_VALUE.FRAME_WIDTH] :>
 <: set FRAME_CLK_RATIO [expr $FRAME_WIDTH/$GT_WIDTH] :>
@@ -26,8 +24,6 @@
 <: set USER_CLK_RATIO [expr $FRAME_WIDTH*$N_CHANNEL/$USER_WIDTH] :>
 <: set USER_GT_CLK_RATIO [expr $USER_WIDTH/$N_CHANNEL/$GT_WIDTH] :>
 <: set ERROR_INJ [get_property PARAM_VALUE.ERROR_INJ] :>
-create_clock -period <=: $GT_PERIOD :> [get_ports gt_ref_clk_p]
-create_clock -period 10.0 [get_ports init_clk]
 set init_clk_src [get_ports init_clk]
 set tx_frame_clk_src [get_pins -hier -filter {NAME =~ */u_tx_clock_buffer/bufg_inst3/O}]
 set tx_frame_clk [get_clocks -quiet -of $tx_frame_clk_src]
