@@ -1,7 +1,7 @@
 # RIFL
 A low latency lossless link layer protocol
 
-How to launch an example design:
+How to launch an example design (tested in Vivado 2020.1):
 
 1. Add the directory "ip_repo" as a Vivado user repository in Vivado IP Catalog.
 2. Instantiate the IP "RIFL", configure it as you need.
