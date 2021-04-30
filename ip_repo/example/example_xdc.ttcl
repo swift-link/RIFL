@@ -35,8 +35,8 @@
 <: set INIT_FREQ [get_property PARAM_VALUE.INIT_FREQ] :>
 <: set INIT_PERIOD [format %.3f [expr 1000.0/$INIT_FREQ]] :>
 create_clock -period <=: $GT_REF_PERIOD :> [get_ports gt_ref_clk_p]
-set_property LOC [get_package_pins -of_objects [get_bels [get_sites -filter {NAME =~ *COMMON*} -of_objects [get_iobanks -of_objects [get_sites <=: ${gt_channel_name}_${master_channel} :>]]]/REFCLK0P]] [get_ports gt_ref_clk_p]
-set_property LOC [get_package_pins -of_objects [get_bels [get_sites -filter {NAME =~ *COMMON*} -of_objects [get_iobanks -of_objects [get_sites <=: ${gt_channel_name}_${master_channel} :>]]]/REFCLK0N]] [get_ports gt_ref_clk_n]
+set_property PACKAGE_PIN [get_package_pins -of_objects [get_bels [get_sites -filter {NAME =~ *COMMON*} -of_objects [get_iobanks -of_objects [get_sites <=: ${gt_channel_name}_${master_channel} :>]]]/REFCLK0P]] [get_ports gt_ref_clk_p]
+set_property PACKAGE_PIN [get_package_pins -of_objects [get_bels [get_sites -filter {NAME =~ *COMMON*} -of_objects [get_iobanks -of_objects [get_sites <=: ${gt_channel_name}_${master_channel} :>]]]/REFCLK0N]] [get_ports gt_ref_clk_n]
 create_clock -period <=: $INIT_PERIOD :> [get_ports init_clk_p]
 ###change below constraints to what reflects your board's wiring
 #set_property IOSTANDARD LVDS_25 [get_ports {init_clk_p[0]}]

@@ -12,9 +12,9 @@
 #
 <: ;#fix header :>
 <: setFileProcessingOrder late :>
-<: setFileUsedIn {synthesis implementation} :>
+<: setFileUsedIn {implementation} :>
 <: setOutputDirectory "./xdc" :>
-<: setFileName [getComponentNameString] :>
+<: setFileName "[getComponentNameString]_impl" :>
 <: setFileExtension ".xdc" :>
 <: set GT_WIDTH [get_property PARAM_VALUE.GT_WIDTH] :>
 <: set FRAME_WIDTH [get_property PARAM_VALUE.FRAME_WIDTH] :>
